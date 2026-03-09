@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Upload - DamageSense AI</title>
+</head>
+<body style="background: #121212; color: white; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0;">
+    <div style="background: #1a1a1a; padding: 30px; border-radius: 10px; border: 1px solid #333; width: 400px; text-align: center;">
+        <h2>📷 Field Assessment</h2>
+        <p style="color: #7f8c8d;">Upload a photo of the structure for AI analysis.</p>
+        
+        <form action="/upload" method="POST" enctype="multipart/form-data" style="display: flex; flex-direction: column; gap: 15px;">
+            <input type="file" name="file" required style="background: #252525; color: white; padding: 10px; border-radius: 5px; border: 1px solid #444;">
+            
+            <button type="submit" style="background: #27ae60; color: white; padding: 12px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer;">
+                Run AI Assessment
+            </button>
+        </form>
+        <br>
+        <a href="/" style="color: #3498db; text-decoration: none;">← Back to Dashboard</a>
+    </div>
+</body>
+</html>
