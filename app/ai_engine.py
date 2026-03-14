@@ -1,4 +1,4 @@
-import numpy as np
+﻿import numpy as np
 import tensorflow as tf
 from tensorflow.keras.applications import MobileNetV2
 from tensorflow.keras.applications.mobilenet_v2 import preprocess_input, decode_predictions
@@ -6,10 +6,16 @@ from tensorflow.keras.preprocessing import image as keras_image
 from PIL import Image
 import io
 
-# ── Load model once at startup ──────────────────────────────────────────────
-model = MobileNetV2(weights='imagenet')
+# -- Load model once at startup ------------------------------------------------
+try:
+    model = MobileNetV2(weights='imagenet')
+    MODEL_LOADED = True
+except Exception as e:
+    print(f"WARNING: Could not load model: {e}")
+    model = None
+    MODEL_LOADED = False
 
-# ── Keywords that trigger CRITICAL severity ──────────────────────────────────
+# -- Keywords that trigger CRITICAL severity ------------------------------------
 CRITICAL_KEYWORDS = [
     'rubble', 'ruin', 'wreckage', 'debris', 'collapse',
     'destruction', 'damage', 'broken', 'flood', 'fire',
@@ -27,23 +33,35 @@ def preprocess_image(file_bytes: bytes) -> np.ndarray:
 def classify_image(file_bytes: bytes) -> dict:
     """
     Run MobileNetV2 classification and apply heuristic severity override.
-
-    Returns:
-        dict with keys: label, confidence, severity
+    Returns dict with keys: label, confidence, severity
     """
-    tensor = preprocess_image(file_bytes)
-    predictions = model.predict(tensor)
-    decoded = decode_predictions(predictions, top=3)[0]
+    if not MODEL_LOADED or model is None:
+        return {
+            'label': 'model_unavailable',
+            'confidence': 0.0,
+            'severity': 'UNKNOWN'
+        }
 
-    top_label      = decoded[0][1].lower().replace('_', ' ')
-    top_confidence = float(decoded[0][2])
+    try:
+        tensor = preprocess_image(file_bytes)
+        predictions = model.predict(tensor, verbose=0)
+        decoded = decode_predictions(predictions, top=3)[0]
 
-    # Heuristic override: check all top-3 labels for critical keywords
-    all_labels = ' '.join([d[1].lower() for d in decoded])
-    severity = 'CRITICAL' if any(kw in all_labels for kw in CRITICAL_KEYWORDS) else 'STABLE'
+        top_label      = decoded[0][1].lower().replace('_', ' ')
+        top_confidence = round(float(decoded[0][2]) * 100, 2)  # convert to %
 
-    return {
-        'label':      top_label,
-        'confidence': top_confidence,
-        'severity':   severity
-    }
+        # Heuristic override: check all top-3 labels for critical keywords
+        all_labels = ' '.join([d[1].lower() for d in decoded])
+        severity = 'CRITICAL' if any(kw in all_labels for kw in CRITICAL_KEYWORDS) else 'STABLE'
+
+        return {
+            'label':      top_label,
+            'confidence': top_confidence,
+            'severity':   severity
+        }
+    except Exception as e:
+        return {
+            'label': f'error: {str(e)}',
+            'confidence': 0.0,
+            'severity': 'UNKNOWN'
+        }
