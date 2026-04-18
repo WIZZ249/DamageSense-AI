@@ -4,7 +4,7 @@ from werkzeug.utils import secure_filename
 from .models import Assessment, db
 from .ai_engine import classify_image
 
-bp = Blueprint('main', __name__)
+main = Blueprint('main', __name__)
 
 UPLOAD_FOLDER = 'app/static/uploads'
 
@@ -12,13 +12,13 @@ if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
 
-@bp.route('/')
+@main.route('/')
 def index():
     reports = Assessment.query.order_by(Assessment.id.desc()).all()
     return render_template('upload.html', reports=reports)
 
 
-@bp.route('/upload', methods=['GET', 'POST'])
+@main.route('/upload', methods=['GET', 'POST'])
 def upload():
     if request.method == 'POST':
         if 'file' not in request.files:
@@ -42,7 +42,6 @@ def upload():
             severity = "UNKNOWN"
 
             try:
-                # classify_image takes bytes, not a filepath
                 file_bytes = open(filepath, 'rb').read()
                 result = classify_image(file_bytes)
                 label = result['label']
@@ -59,7 +58,6 @@ def upload():
             db.session.add(new_report)
             db.session.commit()
 
-            # Return JSON for Android app, redirect for browser
             if request.accept_mimetypes.accept_json:
                 return jsonify({
                     "id": new_report.id,
@@ -75,7 +73,7 @@ def upload():
     return render_template('upload.html')
 
 
-@bp.route('/api/history')
+@main.route('/api/history')
 def api_history():
     records = Assessment.query.order_by(Assessment.id.desc()).limit(50).all()
     return jsonify([
@@ -91,6 +89,6 @@ def api_history():
     ])
 
 
-@bp.route('/health')
+@main.route('/health')
 def health():
     return jsonify({"status": "ok"})
