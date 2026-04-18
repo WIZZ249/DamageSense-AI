@@ -2,7 +2,7 @@ import os
 from flask import Blueprint, render_template, request, redirect, url_for, jsonify
 from werkzeug.utils import secure_filename
 from .models import Assessment, db
-from .ai_engine import analyze_image
+from .ai_engine import classify_image
 
 bp = Blueprint('main', __name__)
 
@@ -37,31 +37,36 @@ def upload():
             filepath = os.path.join(UPLOAD_FOLDER, filename)
             file.save(filepath)
 
-            object_name = "AI Processing Error"
-            conf_score = "0%"
+            label = "analysis_error"
+            confidence = 0.0
+            severity = "UNKNOWN"
 
             try:
-                object_name, conf_score = analyze_image(filepath)
+                # classify_image takes bytes, not a filepath
+                file_bytes = open(filepath, 'rb').read()
+                result = classify_image(file_bytes)
+                label = result['label']
+                confidence = result['confidence']
+                severity = result['severity']
             except Exception as e:
                 print(f"AI Error: {e}")
 
             new_report = Assessment(
                 filename=filename,
-                status=object_name,
-                confidence=conf_score
+                status=label,
+                confidence=str(confidence)
             )
             db.session.add(new_report)
             db.session.commit()
 
             # Return JSON for Android app, redirect for browser
             if request.accept_mimetypes.accept_json:
-                conf_value = float(conf_score.replace('%', '')) if conf_score else 0
                 return jsonify({
                     "id": new_report.id,
                     "filename": filename,
-                    "label": object_name,
-                    "confidence": conf_value,
-                    "severity": "CRITICAL" if conf_value < 60 else "STABLE",
+                    "label": label,
+                    "confidence": confidence,
+                    "severity": severity,
                     "timestamp": str(new_report.id)
                 })
 
@@ -78,8 +83,8 @@ def api_history():
             "id": r.id,
             "filename": r.filename,
             "label": r.status,
-            "confidence": float(r.confidence.replace('%', '')) if r.confidence else 0,
-            "severity": "CRITICAL" if float(r.confidence.replace('%', '') or 0) < 60 else "STABLE",
+            "confidence": float(r.confidence) if r.confidence else 0,
+            "severity": "CRITICAL" if float(r.confidence or 0) < 60 else "STABLE",
             "timestamp": str(r.id)
         }
         for r in records
