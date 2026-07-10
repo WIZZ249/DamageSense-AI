@@ -1,169 +1,127 @@
-﻿# 🏚️ DamageSense AI
+# DamageSense AI
 
-![Python](https://img.shields.io/badge/Python-3.10+-blue?style=flat-square&logo=python)
-![Flask](https://img.shields.io/badge/Flask-3.0.0-black?style=flat-square&logo=flask)
-![TensorFlow](https://img.shields.io/badge/TensorFlow-2.15.0-orange?style=flat-square&logo=tensorflow)
-![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)
-![Status](https://img.shields.io/badge/Status-Active-brightgreen?style=flat-square)
+DamageSense AI is a Flask dashboard for rapid structural damage assessment. Users can register, log in, upload or capture building images, and keep assessment history private to their own account.
 
-> AI-powered humanitarian dashboard for rapid structural damage assessment in disaster zones. Built with Flask, TensorFlow (MobileNetV2), and SQLAlchemy to support field-based disaster response.
+## What It Does
 
----
+- User registration and login
+- Private per-user assessment dashboards
+- Image upload assessment
+- Live camera capture assessment on HTTPS deployments
+- Server-backed assessment history
+- Optional professional hosted model integration through Roboflow
+- Local lightweight image-analysis fallback when no hosted model is configured
 
-## 📌 What It Does
-
-DamageSense AI allows humanitarian field offices to upload images of structures and instantly receive:
-
-- ✅ **AI Classification** — identifies what the image contains using MobileNetV2
-- ✅ **Severity Rating** — automatically flags as `CRITICAL` or `STABLE`
-- ✅ **Heuristic Override** — catches dangerous misclassifications (e.g. "Seashore" bug fix)
-- ✅ **Assessment History** — all results saved to a local SQLite database
-- ✅ **REST API** — JSON endpoints for integration with other systems
-
----
-
-## 🖥️ Tech Stack
+## Tech Stack
 
 | Layer | Technology |
 |---|---|
-| Backend | Python, Flask 3.0 |
-| AI / ML | TensorFlow 2.15, MobileNetV2, Keras |
+| Backend | Python, Flask 3 |
 | Database | SQLAlchemy, SQLite |
-| Frontend | Bootstrap 5, HTML5 |
+| Image Processing | Pillow, NumPy |
+| Optional Hosted AI | Roboflow hosted detection/segmentation model |
+| Frontend | HTML, Bootstrap, browser camera APIs |
 | Testing | Pytest |
 | Deployment | Gunicorn, Render.com |
 
----
+## Project Structure
 
-## 📁 Project Structure
-```
+```text
 DamageSense-AI/
 ├── app/
-│   ├── __init__.py       # App factory & database setup
-│   ├── routes.py         # All Flask routes & API endpoints
-│   ├── models.py         # SQLAlchemy database models
-│   ├── ai_engine.py      # TensorFlow model & classification logic
-│   └── static/
-│       ├── css/          # Stylesheets
-│       └── uploads/      # Uploaded images
+│   ├── __init__.py
+│   ├── routes.py
+│   ├── models.py
+│   ├── ai_engine.py
+│   └── static/uploads/
 ├── templates/
-│   └── upload.html       # Main dashboard UI
-├── tests/
-│   └── test_app.py       # Pytest test suite
-├── .env.example          # Environment variable template
-├── requirements.txt      # Python dependencies
-├── run.py                # Application entry point
+│   ├── login.html
+│   ├── register.html
+│   └── upload.html
+├── tests/test_app.py
+├── .env.example
+├── requirements.txt
+├── run.py
 └── README.md
 ```
 
----
+## Local Setup
 
-## ⚙️ Installation & Setup
-
-### 1. Clone the repository
 ```bash
 git clone https://github.com/WIZZ249/DamageSense-AI.git
 cd DamageSense-AI
-```
-
-### 2. Create a virtual environment
-```bash
 python -m venv venv
-venv\Scripts\activate        # Windows
-source venv/bin/activate     # Mac/Linux
-```
-
-### 3. Install dependencies
-```bash
+venv\Scripts\activate
 pip install -r requirements.txt
-```
-
-### 4. Set up environment variables
-```bash
 cp .env.example .env
-```
-
-### 5. Run the application
-```bash
 python run.py
 ```
 
-Visit **http://localhost:5000** in your browser.
+Open `http://localhost:5000`.
 
----
-
-## 🔌 API Endpoints
+## API Endpoints
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `GET` | `/` | Main dashboard UI |
-| `POST` | `/assess` | Upload image for AI assessment |
-| `GET` | `/history` | Retrieve last 50 assessments |
-| `GET` | `/health` | Health check for deployment |
+| `GET` | `/` | Redirects to login or user home |
+| `GET/POST` | `/register` | Create a user account |
+| `GET/POST` | `/login` | Log in |
+| `GET` | `/logout` | Log out |
+| `GET` | `/home` | User dashboard |
+| `POST` | `/assess` | Upload or camera-captured image assessment |
+| `GET` | `/history` | Current user's latest 50 assessments |
+| `GET` | `/health` | Health check |
 
-### Example — POST `/assess`
-```bash
-curl -X POST http://localhost:5000/assess \
-  -F "image=@/path/to/image.jpg"
+## Professional Model Setup
+
+The app works immediately with a local Pillow/NumPy fallback, but professional damage assessment should use a trained damage model.
+
+Recommended path:
+
+1. Train or choose a Roboflow hosted model for structural/building damage detection.
+2. Use damage classes such as `no_damage`, `minor_damage`, `major_damage`, and `destroyed`.
+3. In Render, add these environment variables:
+
+```text
+ROBOFLOW_API_KEY=your_api_key
+ROBOFLOW_MODEL_ID=your-project/version
+ROBOFLOW_CONFIDENCE=35
+ROBOFLOW_OVERLAP=30
 ```
 
-### Example Response
-```json
-{
-  "id": 1,
-  "filename": "building.jpg",
-  "label": "rubble",
-  "confidence": 94.32,
-  "severity": "CRITICAL",
-  "timestamp": "2026-03-12 22:00:00"
-}
-```
+When these are present, `app/ai_engine.py` calls the hosted model first. If the hosted call fails or is not configured, the app falls back to local image analysis so uploads still work.
 
----
+Recommended datasets and model families:
 
-## 🧪 Running Tests
+- RescueNet for high-resolution UAV disaster imagery
+- xBD/xView2 for satellite before/after disaster damage assessment
+- YOLO segmentation for fast object-level field use
+- SegFormer for stronger semantic segmentation quality
+
+## Camera Capture
+
+The dashboard includes a `Take Picture` mode. Browser camera access requires HTTPS, which Render provides on deployed services. On phones, the upload field also hints to open the device camera.
+
+## Running Tests
+
 ```bash
 pytest tests/
 ```
 
----
+## Deployment on Render
 
-## 🐛 Known Issues Fixed
+1. Connect this repository to Render.
+2. Use start command:
 
-| Bug | Fix |
-|---|---|
-| MobileNetV2 classifying damaged buildings as "Seashore" | Implemented keyword-based heuristic override layer |
-| Session persistence between requests | Implemented SQLAlchemy scoped_session pattern |
+```bash
+gunicorn run:app --timeout 120 --workers 1
+```
 
----
+3. Add environment variables from `.env.example`.
+4. Deploy from `main`.
 
-## 🚀 Deployment
+For serious production use, replace SQLite with PostgreSQL so user accounts and assessment history persist reliably across restarts.
 
-This app is configured for deployment on **Render.com**:
+## License
 
-1. Push your code to GitHub
-2. Go to [render.com](https://render.com) → New Web Service
-3. Connect your `DamageSense-AI` repo
-4. Set start command: `gunicorn run:app`
-5. Click Deploy
-
----
-
-## 👨‍💻 Author
-
-**Ahmed Salaheldeen Alamin Sulieman**
-IT Engineer | AWS Certified Cloud Practitioner | Developer
-
-- 📧 ahmednoooors@gmail.com
-- 🌐 [Portfolio](https://WIZZ249.github.io/yannis-portfolio)
-- 💻 [GitHub](https://github.com/WIZZ249)
-
----
-
-## 📄 License
-
-This project is licensed under the MIT License.
-
----
-
-*Built with purpose — for the people who need it most.*
+MIT
