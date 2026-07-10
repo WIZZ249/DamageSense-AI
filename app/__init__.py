@@ -2,9 +2,28 @@ import os
 
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import inspect
 
 
 db = SQLAlchemy()
+
+
+def reset_legacy_sqlite_schema(app):
+    """Recreate old SQLite databases that predate user-owned assessments."""
+    if not app.config['SQLALCHEMY_DATABASE_URI'].startswith('sqlite'):
+        return
+
+    inspector = inspect(db.engine)
+    table_names = inspector.get_table_names()
+    if 'assessments' not in table_names:
+        return
+
+    assessment_columns = {column['name'] for column in inspector.get_columns('assessments')}
+    if 'user_id' in assessment_columns and 'users' in table_names:
+        return
+
+    db.drop_all()
+    db.create_all()
 
 
 def create_app(config=None):
@@ -29,5 +48,6 @@ def create_app(config=None):
 
     with app.app_context():
         db.create_all()
+        reset_legacy_sqlite_schema(app)
 
     return app
