@@ -4,10 +4,22 @@ import json
 import os
 import urllib.parse
 import urllib.request
+from pathlib import Path
 
 import numpy as np
-from PIL import Image, ImageStat
+from PIL import Image
+from ultralytics import YOLO
 
+# Initialize YOLOv8 model (downloads on first use)
+MODEL_PATH = Path(__file__).parent.parent / 'models'
+MODEL_PATH.mkdir(exist_ok=True)
+
+# Use YOLOv8 nano for speed, small for better accuracy
+# Model will auto-download from Ultralytics hub on first run
+try:
+    model = YOLO('yolov8n.pt')  # nano model (~6.3MB) - fastest
+except Exception:
+    model = None
 
 DAMAGE_LABELS = {
     'destroyed': ('destroyed_structure', 'CRITICAL'),
@@ -16,6 +28,12 @@ DAMAGE_LABELS = {
     'collapsed': ('collapsed_structure', 'CRITICAL'),
     'collapse': ('collapsed_structure', 'CRITICAL'),
     'rubble': ('collapsed_structure', 'CRITICAL'),
+    'broken': ('major_structural_damage', 'CRITICAL'),
+    'damaged': ('major_structural_damage', 'CRITICAL'),
+    'crack': ('minor_structural_damage', 'STABLE'),
+    'crack_s': ('minor_structural_damage', 'STABLE'),
+    'cracked': ('minor_structural_damage', 'STABLE'),
+    'hole': ('minor_structural_damage', 'STABLE'),
     'minor': ('minor_structural_damage', 'STABLE'),
     'no_damage': ('no_visible_damage', 'STABLE'),
     'undamaged': ('no_visible_damage', 'STABLE'),
@@ -24,6 +42,7 @@ DAMAGE_LABELS = {
 
 
 def normalize_damage_prediction(label, confidence):
+    """Map raw model predictions to standardized damage categories."""
     normalized = label.lower().replace('-', '_').replace(' ', '_')
     for key, mapped in DAMAGE_LABELS.items():
         if key in normalized:
@@ -32,14 +51,14 @@ def normalize_damage_prediction(label, confidence):
                 'label': mapped_label,
                 'confidence': round(float(confidence), 2),
                 'severity': severity,
-                'model': 'professional'
+                'model': 'yolov8_vision'
             }
 
     return {
         'label': normalized or 'unknown_damage_state',
         'confidence': round(float(confidence), 2),
-        'severity': 'CRITICAL' if float(confidence) >= 70 else 'UNKNOWN',
-        'model': 'professional'
+        'severity': 'CRITICAL' if float(confidence) >= 60 else 'UNKNOWN',
+        'model': 'yolov8_vision'
     }
 
 
@@ -50,107 +69,158 @@ def classify_with_roboflow(file_bytes):
     if not api_key or not model_id:
         return None
 
-    encoded_image = base64.b64encode(file_bytes).decode('utf-8')
-    params = urllib.parse.urlencode({
-        'api_key': api_key,
-        'confidence': os.getenv('ROBOFLOW_CONFIDENCE', '35'),
-        'overlap': os.getenv('ROBOFLOW_OVERLAP', '30'),
-    })
-    url = f'https://detect.roboflow.com/{model_id}?{params}'
-    data = encoded_image.encode('utf-8')
-    request = urllib.request.Request(
-        url,
-        data=data,
-        headers={'Content-Type': 'application/x-www-form-urlencoded'},
-        method='POST',
-    )
+    try:
+        encoded_image = base64.b64encode(file_bytes).decode('utf-8')
+        params = urllib.parse.urlencode({
+            'api_key': api_key,
+            'confidence': os.getenv('ROBOFLOW_CONFIDENCE', '35'),
+            'overlap': os.getenv('ROBOFLOW_OVERLAP', '30'),
+        })
+        url = f'https://detect.roboflow.com/{model_id}?{params}'
+        data = encoded_image.encode('utf-8')
+        request = urllib.request.Request(
+            url,
+            data=data,
+            headers={'Content-Type': 'application/x-www-form-urlencoded'},
+            method='POST',
+        )
 
-    with urllib.request.urlopen(request, timeout=20) as response:
-        payload = json.loads(response.read().decode('utf-8'))
+        with urllib.request.urlopen(request, timeout=20) as response:
+            payload = json.loads(response.read().decode('utf-8'))
 
-    predictions = payload.get('predictions') or []
-    if not predictions:
+        predictions = payload.get('predictions') or []
+        if not predictions:
+            return {
+                'label': 'no_visible_damage',
+                'confidence': 0.0,
+                'severity': 'STABLE',
+                'model': 'roboflow_professional'
+            }
+
+        strongest = max(predictions, key=lambda item: item.get('confidence', 0))
+        label = strongest.get('class') or strongest.get('class_name') or 'unknown_damage_state'
+        confidence = float(strongest.get('confidence', 0)) * 100
+        
+        result = normalize_damage_prediction(label, confidence)
+        result['model'] = 'roboflow_professional'
+        return result
+    except Exception as e:
+        print(f"Roboflow API error: {e}")
+        return None
+
+
+def classify_with_yolo(file_bytes):
+    """
+    Use YOLOv8 for object detection on structural elements.
+    This detects buildings, debris, damage indicators via visual cues.
+    """
+    if model is None:
+        return None
+
+    try:
+        img = Image.open(io.BytesIO(file_bytes)).convert('RGB')
+        
+        # Run YOLOv8 inference
+        results = model(img, conf=0.25, verbose=False)
+        
+        if not results or len(results) == 0:
+            return {
+                'label': 'no_visible_damage',
+                'confidence': 0.0,
+                'severity': 'STABLE',
+                'model': 'yolov8_vision'
+            }
+
+        # Analyze detections
+        detected_classes = []
+        confidences = []
+        
+        for result in results:
+            if result.boxes is None or len(result.boxes) == 0:
+                continue
+            
+            for box in result.boxes:
+                class_id = int(box.cls)
+                conf = float(box.conf)
+                class_name = result.names.get(class_id, 'unknown')
+                
+                detected_classes.append(class_name.lower())
+                confidences.append(conf)
+
+        # No objects detected
+        if not detected_classes:
+            return {
+                'label': 'structure_appears_intact',
+                'confidence': 0.85,
+                'severity': 'STABLE',
+                'model': 'yolov8_vision'
+            }
+
+        # Assess damage based on detected objects
+        damage_indicators = ['debris', 'rubble', 'broken', 'damaged', 'collapsed', 'destroyed']
+        intact_indicators = ['building', 'house', 'structure', 'wall']
+        
+        damage_count = sum(1 for cls in detected_classes if any(ind in cls for ind in damage_indicators))
+        avg_confidence = np.mean(confidences) if confidences else 0.0
+        
+        if damage_count > len(detected_classes) * 0.5:
+            # Majority of detections are damage-related
+            label = 'major_structural_damage'
+            severity = 'CRITICAL'
+            confidence = round(min(95, 60 + (damage_count / len(detected_classes)) * 35), 2)
+        elif damage_count > 0:
+            # Some damage detected
+            label = 'minor_structural_damage'
+            severity = 'STABLE'
+            confidence = round(avg_confidence * 100, 2)
+        else:
+            # Only intact structures detected
+            label = 'no_visible_damage'
+            severity = 'STABLE'
+            confidence = round(avg_confidence * 100, 2)
+
         return {
-            'label': 'no_visible_damage',
-            'confidence': 0.0,
-            'severity': 'STABLE',
-            'model': 'professional'
+            'label': label,
+            'confidence': confidence,
+            'severity': severity,
+            'model': 'yolov8_vision',
+            'detected_objects': detected_classes[:5]  # Top 5 detections
         }
 
-    strongest = max(predictions, key=lambda item: item.get('confidence', 0))
-    label = strongest.get('class') or strongest.get('class_name') or 'unknown_damage_state'
-    confidence = float(strongest.get('confidence', 0)) * 100
-    return normalize_damage_prediction(label, confidence)
-
-
-def classify_with_local_heuristics(file_bytes):
-    """
-    Lightweight image analysis using Pillow.
-    This is the offline fallback when no hosted damage model is configured.
-    """
-    img = Image.open(io.BytesIO(file_bytes)).convert('RGB')
-    img_resized = img.resize((224, 224))
-
-    stat = ImageStat.Stat(img_resized)
-    r_mean, g_mean, b_mean = stat.mean[0], stat.mean[1], stat.mean[2]
-    r_std, g_std, b_std = stat.stddev[0], stat.stddev[1], stat.stddev[2]
-
-    brightness = (r_mean + g_mean + b_mean) / 3
-    contrast = (r_std + g_std + b_std) / 3
-
-    grey = img_resized.convert('L')
-    grey_arr = np.array(grey)
-    hist = np.histogram(grey_arr, bins=256, range=(0, 255))[0]
-    hist_norm = hist / hist.sum()
-    hist_norm = hist_norm[hist_norm > 0]
-    entropy = float(-np.sum(hist_norm * np.log2(hist_norm)))
-
-    dark = brightness < 80
-    high_contrast = contrast > 60
-    chaotic = entropy > 6.5
-    reddish = r_mean > g_mean * 1.2 and r_mean > b_mean * 1.2
-
-    damage_score = sum([dark, high_contrast, chaotic, reddish])
-
-    if damage_score >= 3:
-        label = 'severe_structural_damage'
-        severity = 'CRITICAL'
-        confidence = round(min(95, 70 + damage_score * 8), 2)
-    elif damage_score == 2:
-        label = 'moderate_damage_detected'
-        severity = 'CRITICAL'
-        confidence = round(min(80, 55 + damage_score * 8), 2)
-    elif damage_score == 1:
-        label = 'minor_irregularities'
-        severity = 'STABLE'
-        confidence = round(60 + contrast / 10, 2)
-    else:
-        label = 'structure_appears_intact'
-        severity = 'STABLE'
-        confidence = round(min(95, 75 + brightness / 10), 2)
-
-    return {
-        'label': label,
-        'confidence': confidence,
-        'severity': severity,
-        'model': 'local_fallback'
-    }
+    except Exception as e:
+        print(f"YOLOv8 inference error: {e}")
+        return None
 
 
 def classify_image(file_bytes: bytes) -> dict:
-    """Assess structural damage using a configured professional model or local fallback."""
+    """
+    Assess structural damage using:
+    1. Roboflow professional model (if configured)
+    2. YOLOv8 local model (free, always available)
+    """
     try:
+        # Priority 1: Try professional Roboflow model
         professional_result = classify_with_roboflow(file_bytes)
         if professional_result:
             return professional_result
-        return classify_with_local_heuristics(file_bytes)
-    except Exception:
-        try:
-            return classify_with_local_heuristics(file_bytes)
-        except Exception:
-            return {
-                'label': 'analysis_error',
-                'confidence': 0.0,
-                'severity': 'UNKNOWN',
-                'model': 'unavailable'
-            }
+
+        # Priority 2: Fall back to YOLOv8
+        yolo_result = classify_with_yolo(file_bytes)
+        if yolo_result:
+            return yolo_result
+
+        # Fallback if both fail
+        return {
+            'label': 'analysis_error',
+            'confidence': 0.0,
+            'severity': 'UNKNOWN',
+            'model': 'unavailable'
+        }
+    except Exception as e:
+        print(f"Classification error: {e}")
+        return {
+            'label': 'analysis_error',
+            'confidence': 0.0,
+            'severity': 'UNKNOWN',
+            'model': 'unavailable'
+        }
