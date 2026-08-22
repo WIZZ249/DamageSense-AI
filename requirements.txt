@@ -10,3 +10,4 @@ Jinja2==3.1.6
 ultralytics==8.0.223
 torch==2.1.2
 torchvision==0.16.2
+tensorflow==2.16.2
