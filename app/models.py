@@ -1,5 +1,6 @@
 from datetime import datetime
 
+
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from app import db
@@ -15,6 +16,8 @@ class User(db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
     role = db.Column(db.String(20), nullable=False, default='user', server_default='user')
     is_active = db.Column(db.Boolean, nullable=False, default=True, server_default='1')
+    reset_token_hash = db.Column(db.String(64), nullable=True, index=True)
+    reset_token_expires_at = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     assessments = db.relationship('Assessment', back_populates='user', cascade='all, delete-orphan')
 
@@ -27,6 +30,33 @@ class User(db.Model):
     @property
     def is_admin(self):
         return self.role == 'admin'
+
+
+class AuditLog(db.Model):
+    """Immutable operational events used by the administrator dashboard."""
+    __tablename__ = 'audit_logs'
+
+    id = db.Column(db.Integer, primary_key=True)
+    actor_user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True, index=True)
+    target_user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True, index=True)
+    action = db.Column(db.String(80), nullable=False, index=True)
+    metadata_json = db.Column(db.Text, nullable=True)
+    ip_address = db.Column(db.String(64), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+
+    actor = db.relationship('User', foreign_keys=[actor_user_id], backref='audit_events_created')
+    target = db.relationship('User', foreign_keys=[target_user_id], backref='audit_events_received')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'action': self.action,
+            'actor': self.actor.username if self.actor else 'System',
+            'target': self.target.username if self.target else None,
+            'metadata': self.metadata_json,
+            'ip_address': self.ip_address,
+            'created_at': self.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+        }
 
 
 class Assessment(db.Model):

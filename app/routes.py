@@ -1,19 +1,47 @@
+import csv
+import hashlib
+import io
+import json
 import os
+import secrets
 import uuid
+from datetime import datetime, timedelta
 from functools import wraps
 
 from flask import Blueprint, Response, current_app, flash, jsonify, redirect, render_template, request, send_from_directory, session, url_for
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 from PIL import Image, UnidentifiedImageError
 from werkzeug.utils import secure_filename
 
 from . import limiter
 from .ai_engine import classify_image
-from .models import Assessment, User, db
+from .email_service import email_enabled, send_password_reset_email, send_registration_email
+from .models import Assessment, AuditLog, User, db
 
 main = Blueprint('main', __name__)
 
 ALLOWED_IMAGE_EXTENSIONS = {'jpg', 'jpeg', 'png', 'webp'}
 MIN_PASSWORD_LENGTH = 8
+RESET_TOKEN_TTL = timedelta(hours=1)
+
+
+def record_audit(action, actor=None, target=None, metadata=None):
+    """Persist an operational event without allowing logging failures to break requests."""
+    try:
+        db.session.add(AuditLog(
+            action=action,
+            actor_user_id=actor.id if actor else None,
+            target_user_id=target.id if target else None,
+            metadata_json=json.dumps(metadata or {}, sort_keys=True),
+            ip_address=request.headers.get('X-Forwarded-For', request.remote_addr),
+        ))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception('Could not write audit event: %s', action)
 
 
 def wants_json_response():
@@ -94,6 +122,8 @@ def register():
             user.set_password(password)
             db.session.add(user)
             db.session.commit()
+            record_audit('user_registered', target=user)
+            send_registration_email(user)
             session.clear()
             session['user_id'] = user.id
             flash('Account created. Welcome to your workspace.', 'success')
@@ -114,13 +144,62 @@ def login():
         user = User.query.filter((User.username == identity) | (User.email == identity.lower())).first()
 
         if user and user.is_active and user.check_password(password):
+            record_audit('login_success', actor=user)
             session.clear()
             session['user_id'] = user.id
             return redirect(request.args.get('next') or (url_for('main.admin') if user.is_admin else url_for('main.home')))
 
+        record_audit('login_failed', metadata={'identity_provided': bool(identity)})
         flash('Invalid username, email, or password.', 'error')
 
     return render_template('login.html')
+
+
+@main.route('/forgot-password', methods=['GET', 'POST'])
+@limiter.limit('5 per hour')
+def forgot_password():
+    if request.method == 'POST':
+        email = request.form.get('email', '').strip().lower()
+        user = User.query.filter_by(email=email).first() if email else None
+        if user and user.is_active:
+            raw_token = secrets.token_urlsafe(32)
+            user.reset_token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
+            user.reset_token_expires_at = datetime.utcnow() + RESET_TOKEN_TTL
+            db.session.commit()
+            reset_url = url_for('main.reset_password', token=raw_token, _external=True)
+            send_password_reset_email(user, reset_url)
+            record_audit('password_reset_requested', target=user)
+        else:
+            record_audit('password_reset_requested_unknown')
+        flash('If an active account matches that email, a password reset link has been sent.', 'success')
+        return redirect(url_for('main.forgot_password'))
+    return render_template('forgot_password.html')
+
+
+@main.route('/reset-password/<token>', methods=['GET', 'POST'])
+@limiter.limit('10 per hour')
+def reset_password(token):
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    user = User.query.filter_by(reset_token_hash=token_hash).first()
+    is_valid = bool(user and user.is_active and user.reset_token_expires_at and user.reset_token_expires_at > datetime.utcnow())
+    if not is_valid:
+        return render_template('error.html', code=400, title='Reset link expired', message='This password reset link is invalid or has expired. Request a new link to continue.'), 400
+    if request.method == 'POST':
+        password = request.form.get('password', '')
+        confirm_password = request.form.get('confirm_password', '')
+        if len(password) < MIN_PASSWORD_LENGTH:
+            flash(f'Password must be at least {MIN_PASSWORD_LENGTH} characters.', 'error')
+        elif password != confirm_password:
+            flash('Passwords do not match.', 'error')
+        else:
+            user.set_password(password)
+            user.reset_token_hash = None
+            user.reset_token_expires_at = None
+            db.session.commit()
+            record_audit('password_reset_completed', target=user)
+            flash('Password updated. You can now log in.', 'success')
+            return redirect(url_for('main.login'))
+    return render_template('reset_password.html', token=token)
 
 
 @main.route('/logout')
@@ -133,6 +212,14 @@ def logout():
 @admin_required
 def admin():
     users = User.query.order_by(User.created_at.desc(), User.id.desc()).all()
+    recent_logs = AuditLog.query.order_by(AuditLog.created_at.desc()).limit(100).all()
+    today = datetime.utcnow().date()
+    activity = []
+    for offset in range(13, -1, -1):
+        day = today - timedelta(days=offset)
+        start = datetime.combine(day, datetime.min.time())
+        end = start + timedelta(days=1)
+        activity.append({'label': day.strftime('%b %d'), 'count': Assessment.query.filter(Assessment.timestamp >= start, Assessment.timestamp < end).count()})
     return render_template(
         'admin.html',
         users=users,
@@ -140,7 +227,50 @@ def admin():
         active_users=User.query.filter_by(is_active=True).count(),
         admin_users=User.query.filter_by(role='admin').count(),
         total_assessments=Assessment.query.count(),
+        critical_assessments=Assessment.query.filter_by(severity='CRITICAL').count(),
+        recent_logs=recent_logs,
+        activity=activity,
+        email_enabled=email_enabled(),
     )
+
+
+def assessment_export_rows():
+    assessments = Assessment.query.join(User, Assessment.user_id == User.id).order_by(Assessment.timestamp.desc(), Assessment.id.desc()).all()
+    return [[
+        report.timestamp.strftime('%Y-%m-%d %H:%M:%S'), report.user.username, report.user.email,
+        report.filename, report.label, f'{report.confidence:.2f}%', report.severity,
+        report.urgency or '', report.recommendation_summary or '', report.recommendation_next_step or '',
+    ] for report in assessments]
+
+
+@main.route('/admin/exports/assessments.csv')
+@admin_required
+def export_assessments_csv():
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['Timestamp', 'Username', 'Email', 'Filename', 'Classification', 'Confidence', 'Severity', 'Urgency', 'Recommendation', 'Next step'])
+    writer.writerows(assessment_export_rows())
+    record_audit('assessment_exported', actor=current_user(), metadata={'format': 'csv'})
+    return Response(output.getvalue(), mimetype='text/csv', headers={'Content-Disposition': 'attachment; filename=damagesense-assessments.csv'})
+
+
+@main.route('/admin/exports/assessments.pdf')
+@admin_required
+def export_assessments_pdf():
+    buffer = io.BytesIO()
+    document = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30)
+    styles = getSampleStyleSheet()
+    rows = [['Date', 'User', 'Classification', 'Confidence', 'Severity', 'Recommendation']]
+    for row in assessment_export_rows():
+        rows.append([row[0], row[1], row[4], row[5], row[6], row[8] or '-'])
+    story = [Paragraph('DamageSense AI — Assessment Report', styles['Title']), Spacer(1, 10), Paragraph(f'Generated {datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")} · {len(rows) - 1} assessments across all users', styles['Normal']), Spacer(1, 14)]
+    table = Table(rows, repeatRows=1, colWidths=[75, 70, 85, 55, 55, 155])
+    table.setStyle(TableStyle([('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#122640')), ('TEXTCOLOR', (0, 0), (-1, 0), colors.white), ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'), ('FONTSIZE', (0, 0), (-1, -1), 7), ('GRID', (0, 0), (-1, -1), .25, colors.HexColor('#c9d3df')), ('VALIGN', (0, 0), (-1, -1), 'TOP'), ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f4f7fb')])]))
+    story.append(table)
+    document.build(story)
+    record_audit('assessment_exported', actor=current_user(), metadata={'format': 'pdf'})
+    buffer.seek(0)
+    return Response(buffer.read(), mimetype='application/pdf', headers={'Content-Disposition': 'attachment; filename=damagesense-assessments.pdf'})
 
 
 @main.route('/admin/users/<int:user_id>/toggle-active', methods=['POST'])
@@ -155,6 +285,7 @@ def toggle_user_active(user_id):
     else:
         target.is_active = not target.is_active
         db.session.commit()
+        record_audit('user_status_changed', actor=actor, target=target, metadata={'is_active': target.is_active})
         flash(f'{target.username} is now {"active" if target.is_active else "disabled"}.', 'success')
     return redirect(url_for('main.admin'))
 
@@ -173,6 +304,7 @@ def toggle_user_role(user_id):
     else:
         target.role = 'user' if target.is_admin else 'admin'
         db.session.commit()
+        record_audit('user_role_changed', actor=actor, target=target, metadata={'role': target.role})
         flash(f'{target.username} is now an {"administrator" if target.is_admin else "standard user"}.', 'success')
     return redirect(url_for('main.admin'))
 
@@ -274,9 +406,10 @@ def upload():
     )
     db.session.add(new_report)
     db.session.commit()
-
+    record_audit('assessment_created', actor=current_user(), target=current_user(), metadata={'assessment_id': new_report.id, 'severity': severity, 'label': label})
     if wants_json_response():
         return jsonify(new_report.to_dict())
+
 
     return redirect(url_for('main.home'))
 

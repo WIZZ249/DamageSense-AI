@@ -18,6 +18,8 @@ limiter = Limiter(key_func=get_remote_address)
 _USER_COLUMN_ADDITIONS = {
     'role': "VARCHAR(20) NOT NULL DEFAULT 'user'",
     'is_active': 'BOOLEAN NOT NULL DEFAULT TRUE',
+    'reset_token_hash': 'VARCHAR(64)',
+    'reset_token_expires_at': 'DATETIME',
 }
 
 _ASSESSMENT_COLUMN_ADDITIONS = {

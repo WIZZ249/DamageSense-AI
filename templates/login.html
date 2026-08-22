@@ -53,6 +53,7 @@
                     <label for="password">Password</label>
                     <input class="form-control" id="password" name="password" type="password" autocomplete="current-password" required>
                 </div>
+                <div style="text-align:right;margin:-4px 0 14px;font-size:.8rem"><a href="{{ url_for('main.forgot_password') }}">Forgot password?</a></div>
                 <button class="btn btn-primary" type="submit">Login</button>
             </form>
             <div class="switch">No account yet? <a href="{{ url_for('main.register') }}">Create one</a></div>

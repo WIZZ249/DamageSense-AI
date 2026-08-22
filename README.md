@@ -6,6 +6,8 @@ DamageSense AI is a Flask dashboard for rapid structural damage assessment. User
 
 - User registration and login
 - Secure administrator console with user directory, role management, and account activation controls
+- SendGrid registration and password-reset notifications
+- Administrator CSV/PDF exports, activity metrics, and audit logs
 - Private per-user assessment dashboards
 - Image upload assessment
 - Live camera capture assessment on HTTPS deployments
@@ -69,11 +71,15 @@ Open `http://localhost:5000`.
 | `GET` | `/` | Redirects to login or user home |
 | `GET/POST` | `/register` | Create a user account |
 | `GET/POST` | `/login` | Log in |
+| `GET/POST` | `/forgot-password` | Request a password reset email |
+| `GET/POST` | `/reset-password/<token>` | Complete a one-time password reset |
 | `GET` | `/logout` | Log out |
 | `GET` | `/home` | User dashboard |
 | `GET` | `/admin` | Administrator user-management console |
 | `POST` | `/admin/users/<id>/toggle-active` | Enable or disable a user (administrator only) |
 | `POST` | `/admin/users/<id>/toggle-role` | Promote or demote a user (administrator only) |
+| `GET` | `/admin/exports/assessments.csv` | Download all assessments as CSV (administrator only) |
+| `GET` | `/admin/exports/assessments.pdf` | Download all assessments as PDF (administrator only) |
 | `POST` | `/assess` | Upload or camera-captured image assessment |
 | `GET` | `/history` | Current user's latest 50 assessments |
 | `GET` | `/health` | Health check |
@@ -117,6 +123,18 @@ ADMIN_PASSWORD=use-a-long-unique-password
 The account is created if it does not exist, or promoted to administrator if the email or username already exists. The password is not changed on later deploys unless `ADMIN_RESET_PASSWORD=true` is explicitly set. Administrators are redirected to `/admin` after login and can manage other users, while the application prevents an administrator from disabling or demoting their own account and prevents removing the last active administrator.
 
 After the first successful login, store the credentials in a password manager. Do not commit them to `.env`, source code, or GitHub.
+
+## Email Notifications
+
+Set the following variables in Render to enable registration and password-reset emails through SendGrid's v3 Mail Send API. Use a verified sender/domain and a key with Mail Send permission.
+
+```text
+SENDGRID_API_KEY=your_sendgrid_api_key
+SENDGRID_FROM_EMAIL=verified-sender@example.com
+SENDGRID_FROM_NAME=DamageSense AI
+```
+
+If email is not configured, registration and reset requests still complete safely, while the admin console shows the delivery status as not configured. Password reset responses do not reveal whether an email is registered.
 
 ## Camera Capture
 

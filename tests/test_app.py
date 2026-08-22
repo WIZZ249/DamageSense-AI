@@ -4,7 +4,7 @@ import pytest
 from PIL import Image
 
 from app import create_app, db
-from app.models import User
+from app.models import Assessment, AuditLog, User
 
 
 @pytest.fixture
@@ -108,6 +108,52 @@ def test_history_is_scoped_to_logged_in_user(client):
     register(client, username='beta', email='beta@example.com')
     beta_history = client.get('/history').get_json()
     assert beta_history == []
+
+
+def test_password_reset_uses_one_time_token_and_updates_password(client, monkeypatch):
+    """Reset requests are generic and successful resets consume the token."""
+    register(client)
+    sent = {}
+
+    def capture_email(user, reset_url):
+        sent['url'] = reset_url
+        return True
+
+    monkeypatch.setattr('app.routes.send_password_reset_email', capture_email)
+    response = client.post('/forgot-password', data={'email': 'field@example.com'}, follow_redirects=True)
+    assert response.status_code == 200
+    assert b'If an active account matches' in response.data
+    token = sent['url'].rsplit('/', 1)[-1]
+    reset_response = client.post(f'/reset-password/{token}', data={
+        'password': 'new-password-123', 'confirm_password': 'new-password-123',
+    })
+    assert reset_response.status_code == 302
+    with client.application.app_context():
+        user = User.query.filter_by(email='field@example.com').first()
+        assert user.check_password('new-password-123')
+        assert user.reset_token_hash is None
+        assert any(log.action == 'password_reset_completed' for log in AuditLog.query.all())
+
+
+def test_admin_exports_csv_and_pdf_across_users(tmp_path, monkeypatch):
+    """Administrators can download both supported cross-user report formats."""
+    app = make_admin_app(tmp_path, monkeypatch)
+    with app.app_context():
+        user = User(username='assessor', email='assessor@example.com')
+        user.set_password('password123')
+        db.session.add(user)
+        db.session.flush()
+        db.session.add(Assessment(user_id=user.id, filename='wall.png', label='major_damage', confidence=91.2, severity='CRITICAL'))
+        db.session.commit()
+    with app.test_client() as admin_client:
+        admin_client.post('/login', data={'identity': 'operations_admin', 'password': 'secure-admin-password'})
+        csv_response = admin_client.get('/admin/exports/assessments.csv')
+        pdf_response = admin_client.get('/admin/exports/assessments.pdf')
+        assert csv_response.status_code == 200
+        assert b'Username,Email' in csv_response.data
+        assert b'assessor,assessor@example.com' in csv_response.data
+        assert pdf_response.status_code == 200
+        assert pdf_response.data.startswith(b'%PDF')
 
 
 def make_admin_app(tmp_path, monkeypatch):

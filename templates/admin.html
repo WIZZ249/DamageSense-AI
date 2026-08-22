@@ -39,11 +39,30 @@
         .flash { padding:11px 13px; border:1px solid; border-radius:11px; font-size:.78rem; }
         .flash-success { color:#b9f6ce; border-color:rgba(109,222,154,.28); background:rgba(109,222,154,.09); }
         .flash-error { color:#ffc1c6; border-color:rgba(255,116,126,.3); background:rgba(255,116,126,.09); }
-        .metrics { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:25px; }
+        .metrics { display:grid; grid-template-columns:repeat(5,1fr); gap:12px; margin-bottom:25px; }
+        .analytics-grid { display:grid; grid-template-columns:minmax(0,1.1fr) minmax(300px,.9fr); gap:18px; margin-bottom:22px; }
+        .analytics-card { padding:21px; border:1px solid var(--line); border-radius:16px; background:rgba(16,30,50,.78); }
+        .analytics-card h2 { margin:0 0 5px; font-size:1.03rem; }
+        .analytics-card p { margin:0 0 18px; color:var(--muted); font-size:.76rem; }
+        .activity-chart { height:155px; display:flex; align-items:end; gap:8px; padding-top:8px; border-bottom:1px solid var(--line); }
+        .bar-wrap { height:100%; flex:1; display:flex; flex-direction:column; justify-content:end; align-items:center; gap:7px; min-width:0; }
+        .bar { width:100%; max-width:25px; min-height:3px; border-radius:6px 6px 0 0; background:linear-gradient(180deg,var(--cyan),rgba(85,214,210,.28)); transition:height 450ms var(--ease-out); }
+        .bar-label { color:var(--muted); font-size:.59rem; transform:rotate(-40deg); white-space:nowrap; }
+        .bar-count { color:var(--muted-strong); font-size:.62rem; }
+        .export-actions { display:flex; gap:9px; flex-wrap:wrap; }
+        .export-button { display:inline-flex; align-items:center; gap:8px; padding:10px 12px; border:1px solid var(--line); border-radius:10px; color:var(--muted-strong); background:rgba(4,11,20,.24); text-decoration:none; font-size:.74rem; font-weight:700; transition:all 160ms var(--ease-out); }
+        .export-button:hover { border-color:rgba(85,214,210,.4); color:var(--cyan); background:rgba(85,214,210,.07); }
+        .export-button .icon { width:15px; height:15px; }
+        .status-line { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:17px; padding-top:15px; border-top:1px solid var(--line); color:var(--muted); font-size:.73rem; }
+        .audit-panel { margin-top:22px; }
+        .audit-table { min-width:680px; }
+        .audit-action { color:var(--ink); font-weight:700; }
+        .audit-meta { color:var(--muted); font-size:.7rem; }
+        .empty-audit { padding:25px; color:var(--muted); font-size:.78rem; text-align:center; }
         .metric { padding:18px; border:1px solid var(--line); border-radius:16px; background:rgba(16,30,50,.75); box-shadow:0 18px 55px rgba(0,0,0,.18); }
         .metric-label { display:block; margin-bottom:7px; color:var(--muted); font-size:.67rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; }
         .metric-value { display:block; color:var(--ink); font:800 1.65rem Manrope,sans-serif; }
-        .metric:nth-child(2) .metric-value { color:var(--green); } .metric:nth-child(3) .metric-value { color:#c9c2ff; } .metric:nth-child(4) .metric-value { color:var(--cyan); }
+        .metric:nth-child(2) .metric-value { color:var(--green); } .metric:nth-child(3) .metric-value { color:#c9c2ff; } .metric:nth-child(4) .metric-value { color:var(--cyan); } .metric:nth-child(5) .metric-value { color:var(--red); }
         .panel { border:1px solid var(--line); border-radius:18px; background:rgba(16,30,50,.78); box-shadow:0 24px 70px rgba(0,0,0,.22); overflow:hidden; }
         .panel-head { display:flex; align-items:end; justify-content:space-between; gap:18px; padding:22px 23px; border-bottom:1px solid var(--line); }
         .panel-head h2 { margin:0 0 5px; font-size:1.15rem; }
@@ -80,7 +99,8 @@
         footer { border-top:1px solid var(--line); color:var(--muted); font-size:.71rem; }
         .footer-inner { min-height:70px; display:flex; align-items:center; justify-content:space-between; gap:20px; }
         .footer-links { display:flex; gap:18px; } .footer-links a { color:var(--muted); text-decoration:none; } .footer-links a:hover { color:var(--ink); }
-        @media (max-width:760px) { .container { width:min(100% - 32px,1180px); } .topbar-inner { min-height:66px; } .top-actions { gap:8px; } .admin-pill { display:none; } .hero { padding:45px 0 32px; } .metrics { grid-template-columns:repeat(2,1fr); } .panel-head { display:block; } .search { width:100%; margin-top:15px; } .footer-inner { min-height:82px; align-items:flex-start; justify-content:center; flex-direction:column; gap:8px; } }
+        @media (max-width:760px) { .container { width:min(100% - 32px,1180px); } .topbar-inner { min-height:66px; } .top-actions { gap:8px; } .admin-pill { display:none; } .hero { padding:45px 0 32px; }         .metrics { grid-template-columns:repeat(2,1fr); } .analytics-grid { grid-template-columns:1fr; } .panel-head { display:block; }
+ .search { width:100%; margin-top:15px; } .footer-inner { min-height:82px; align-items:flex-start; justify-content:center; flex-direction:column; gap:8px; } }
         @media (prefers-reduced-motion:reduce) { *,*::before,*::after { transition-duration:.01ms !important; animation-duration:.01ms !important; } }
     </style>
 </head>
@@ -92,13 +112,21 @@
 <header class="hero"><div class="container"><div class="eyebrow">Secure operations console</div><h1>Keep the workspace healthy.</h1><p>Monitor access, manage account status, and maintain a clear view of platform activity from one controlled surface.</p></div></header>
 <main class="workspace container">
     {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}<div class="flash-stack">{% for category, message in messages %}<div class="flash flash-{{ category }}" role="status">{{ message }}</div>{% endfor %}</div>{% endif %}{% endwith %}
-    <section class="metrics" aria-label="Platform summary"><div class="metric"><span class="metric-label">Total users</span><span class="metric-value">{{ total_users }}</span></div><div class="metric"><span class="metric-label">Active accounts</span><span class="metric-value">{{ active_users }}</span></div><div class="metric"><span class="metric-label">Administrators</span><span class="metric-value">{{ admin_users }}</span></div><div class="metric"><span class="metric-label">Assessments</span><span class="metric-value">{{ total_assessments }}</span></div></section>
+    <section class="metrics" aria-label="Platform summary"><div class="metric"><span class="metric-label">Total users</span><span class="metric-value">{{ total_users }}</span></div><div class="metric"><span class="metric-label">Active accounts</span><span class="metric-value">{{ active_users }}</span></div><div class="metric"><span class="metric-label">Administrators</span><span class="metric-value">{{ admin_users }}</span></div><div class="metric"><span class="metric-label">Assessments</span><span class="metric-value">{{ total_assessments }}</span></div><div class="metric"><span class="metric-label">Critical cases</span><span class="metric-value">{{ critical_assessments }}</span></div></section>
+    <section class="analytics-grid" aria-label="System analytics">
+        <div class="analytics-card"><h2>Assessment activity</h2><p>Daily assessment volume across all users for the last 14 days.</p><div class="activity-chart" id="activityChart">{% for item in activity %}<div class="bar-wrap" data-count="{{ item.count }}" title="{{ item.label }}: {{ item.count }} assessments"><span class="bar-count">{{ item.count }}</span><div class="bar" style="height:3px"></div><span class="bar-label">{{ item.label }}</span></div>{% endfor %}</div></div>
+        <div class="analytics-card"><h2>Reporting & delivery</h2><p>Download an administrator-wide snapshot or confirm notification readiness.</p><div class="export-actions"><a class="export-button" href="{{ url_for('main.export_assessments_csv') }}"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14"/></svg>Export CSV</a><a class="export-button" href="{{ url_for('main.export_assessments_pdf') }}"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg>Export PDF</a></div><div class="status-line"><span>Transactional email</span><span class="badge {{ 'badge-active' if email_enabled else 'badge-disabled' }}">{{ 'Configured' if email_enabled else 'Not configured' }}</span></div></div>
+    </section>
     <section class="panel"><div class="panel-head"><div><h2>User directory</h2><p>Role changes and account activation apply immediately.</p></div><input class="search" id="userSearch" type="search" placeholder="Search users or email" aria-label="Search users or email"></div>
         <div class="table-wrap"><table><thead><tr><th>User</th><th>Role</th><th>Status</th><th>Assessments</th><th>Joined</th><th style="text-align:right">Controls</th></tr></thead><tbody id="userRows">{% for user in users %}<tr data-search="{{ user.username|lower }} {{ user.email|lower }} {{ user.role }}"><td><div class="user-cell"><span class="avatar">{{ user.username[0]|upper }}</span><div><div class="user-name">{{ user.username }}</div><div class="user-email">{{ user.email }}</div></div></div></td><td><span class="badge {{ 'badge-admin' if user.is_admin else 'badge-user' }}">{{ 'Administrator' if user.is_admin else 'Standard user' }}</span></td><td><span class="badge {{ 'badge-active' if user.is_active else 'badge-disabled' }}">{{ 'Active' if user.is_active else 'Disabled' }}</span></td><td>{{ user.assessments|length }}</td><td>{{ user.created_at.strftime('%b %d, %Y') if user.created_at else '—' }}</td><td><div class="actions">{% if user.id == current_user.id %}<span class="self-note">Current account</span>{% else %}<form class="action-form" method="post" action="{{ url_for('main.toggle_user_role', user_id=user.id) }}" onsubmit="return confirm('Change this user\'s role?');"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="action-button promote" type="submit">{{ 'Make user' if user.is_admin else 'Make admin' }}</button></form><form class="action-form" method="post" action="{{ url_for('main.toggle_user_active', user_id=user.id) }}" onsubmit="return confirm('{{ 'Disable' if user.is_active else 'Enable' }} this account?');"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="action-button {{ 'danger' if user.is_active else '' }}" type="submit">{{ 'Disable' if user.is_active else 'Enable' }}</button></form>{% endif %}</div></td></tr>{% endfor %}</tbody></table><div class="empty" id="emptyUsers">No users match your search.</div></div>
     </section>
+    <section class="panel audit-panel"><div class="panel-head"><div><h2>Recent audit activity</h2><p>Operational events from registrations, assessments, access changes, resets, and exports.</p></div></div><div class="table-wrap"><table class="audit-table"><thead><tr><th>Time</th><th>Action</th><th>Actor</th><th>Target</th><th>IP address</th></tr></thead><tbody>{% for log in recent_logs %}<tr><td>{{ log.created_at.strftime('%b %d, %H:%M') }}</td><td class="audit-action">{{ log.action|replace('_', ' ')|title }}</td><td>{{ log.actor.username if log.actor else 'System' }}</td><td>{{ log.target.username if log.target else '—' }}</td><td class="audit-meta">{{ log.ip_address or '—' }}</td></tr>{% else %}<tr><td colspan="5" class="empty-audit">No audit activity recorded yet.</td></tr>{% endfor %}</tbody></table></div></section>
 </main>
 <footer><div class="container footer-inner"><span>© 2026 DamageSense AI · Administrator actions are protected by CSRF.</span><div class="footer-links"><a href="{{ url_for('main.home') }}">Assessment workspace</a><a href="/health">API status</a></div></div></footer>
 <script>
+    const chartBars = [...document.querySelectorAll('.bar-wrap')];
+    const maxActivity = Math.max(...chartBars.map(item => Number(item.dataset.count)), 1);
+    chartBars.forEach(item => { item.querySelector('.bar').style.height = Math.max(3, Number(item.dataset.count) / maxActivity * 100) + '%'; });
     const search = document.getElementById('userSearch');
     const rows = [...document.querySelectorAll('#userRows tr')];
     const empty = document.getElementById('emptyUsers');
