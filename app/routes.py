@@ -442,8 +442,14 @@ def sitemap_xml():
     return Response(body, mimetype='application/xml')
 
 
+@main.route('/google040001972a56c425.html')
+def google_site_verification_file():
+    """Serve the exact file supplied by Google Search Console."""
+    return Response('google-site-verification: google040001972a56c425.html', mimetype='text/html')
+
+
 @main.route('/<verification_filename>')
-def google_site_verification_file(verification_filename):
+def google_site_verification_configured_file(verification_filename):
     configured_file = os.getenv('GOOGLE_SITE_VERIFICATION_FILE', '').strip()
     token = os.getenv('GOOGLE_SITE_VERIFICATION_TOKEN', '').strip()
     if configured_file and token and verification_filename == configured_file and verification_filename.startswith('google') and verification_filename.endswith('.html'):

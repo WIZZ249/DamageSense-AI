@@ -57,6 +57,12 @@ def test_index_renders_public_landing_page(client):
     assert b'canonical' in r.data
 
 
+def test_google_verification_file_is_served_at_site_root(client):
+    response = client.get('/google040001972a56c425.html')
+    assert response.status_code == 200
+    assert response.data == b'google-site-verification: google040001972a56c425.html'
+
+
 def test_register_creates_user_home(client):
     """Registration should create a logged-in workspace."""
     r = register(client)
