@@ -49,11 +49,12 @@ def test_health_check(client):
     assert b'ok' in r.data
 
 
-def test_index_redirects_to_login(client):
-    """Anonymous users should start at login."""
+def test_index_renders_public_landing_page(client):
+    """Anonymous users should see the public crawlable landing page."""
     r = client.get('/')
-    assert r.status_code == 302
-    assert '/login' in r.headers['Location']
+    assert r.status_code == 200
+    assert b'See damage clearly' in r.data
+    assert b'canonical' in r.data
 
 
 def test_register_creates_user_home(client):

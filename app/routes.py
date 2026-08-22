@@ -8,7 +8,7 @@ import uuid
 from datetime import datetime, timedelta
 from functools import wraps
 
-from flask import Blueprint, Response, current_app, flash, jsonify, redirect, render_template, request, send_from_directory, session, url_for
+from flask import Blueprint, Response, abort, current_app, flash, jsonify, redirect, render_template, request, send_from_directory, session, url_for
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet
@@ -92,9 +92,10 @@ def inject_user():
 
 @main.route('/')
 def index():
-    if current_user() is None:
-        return redirect(url_for('main.login'))
-    return redirect(url_for('main.home'))
+    if current_user() is not None:
+        return redirect(url_for('main.home'))
+    site_url = os.getenv('PUBLIC_SITE_URL', 'https://damagesense-ai-1.onrender.com').rstrip('/')
+    return render_template('landing.html', site_url=site_url, google_verification=os.getenv('GOOGLE_SITE_VERIFICATION', '').strip())
 
 
 @main.route('/register', methods=['GET', 'POST'])
@@ -429,21 +430,22 @@ def health():
 
 @main.route('/robots.txt')
 def robots_txt():
-    return send_from_directory(current_app.root_path + '/..', 'robots.txt')
+    site_url = os.getenv('PUBLIC_SITE_URL', 'https://damagesense-ai-1.onrender.com').rstrip('/')
+    body = '\n'.join(['User-agent: *', 'Allow: /', 'Allow: /login', 'Allow: /register', 'Disallow: /home', 'Disallow: /assess', 'Disallow: /history', 'Disallow: /api/', 'Disallow: /admin', 'Disallow: /static/uploads/', f'Sitemap: {site_url}/sitemap.xml', ''])
+    return Response(body, mimetype='text/plain')
 
 
 @main.route('/sitemap.xml')
 def sitemap_xml():
-    return send_from_directory(current_app.root_path + '/..', 'sitemap.xml')
+    site_url = os.getenv('PUBLIC_SITE_URL', 'https://damagesense-ai-1.onrender.com').rstrip('/')
+    body = f'''<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url><loc>{site_url}/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>\n  <url><loc>{site_url}/login</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>\n  <url><loc>{site_url}/register</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>\n  <url><loc>{site_url}/forgot-password</loc><changefreq>yearly</changefreq><priority>0.2</priority></url>\n</urlset>\n'''
+    return Response(body, mimetype='application/xml')
 
 
-@main.route('/googleXXXXXXXXXXXXXXXX.html')
-def google_site_verification_placeholder():
-    """
-    Placeholder route for Google Search Console's HTML-file verification
-    method. Rename this route (and the return string) to match the exact
-    filename Google gives you — e.g. google1a2b3c4d5e6f7g8h.html — and it
-    will be served at your domain root, which is what GSC checks for.
-    See the deployment guide for the exact steps.
-    """
-    return Response('google-site-verification: REPLACE-WITH-FILENAME', mimetype='text/html')
+@main.route('/<verification_filename>')
+def google_site_verification_file(verification_filename):
+    configured_file = os.getenv('GOOGLE_SITE_VERIFICATION_FILE', '').strip()
+    token = os.getenv('GOOGLE_SITE_VERIFICATION_TOKEN', '').strip()
+    if configured_file and token and verification_filename == configured_file and verification_filename.startswith('google') and verification_filename.endswith('.html'):
+        return Response(f'google-site-verification: {token}', mimetype='text/html')
+    abort(404)

@@ -8,6 +8,7 @@ DamageSense AI is a Flask dashboard for rapid structural damage assessment. User
 - Secure administrator console with user directory, role management, and account activation controls
 - SendGrid registration and password-reset notifications
 - Administrator CSV/PDF exports, activity metrics, and audit logs
+- Public SEO landing page with canonical metadata, Open Graph tags, JSON-LD, robots.txt, sitemap.xml, and Search Console verification support
 - Private per-user assessment dashboards
 - Image upload assessment
 - Live camera capture assessment on HTTPS deployments
@@ -83,6 +84,8 @@ Open `http://localhost:5000`.
 | `POST` | `/assess` | Upload or camera-captured image assessment |
 | `GET` | `/history` | Current user's latest 50 assessments |
 | `GET` | `/health` | Health check |
+| `GET` | `/robots.txt` | Crawler directives and sitemap location |
+| `GET` | `/sitemap.xml` | Dynamic public URL sitemap |
 
 ## Professional Model Setup
 
@@ -123,6 +126,14 @@ ADMIN_PASSWORD=use-a-long-unique-password
 The account is created if it does not exist, or promoted to administrator if the email or username already exists. The password is not changed on later deploys unless `ADMIN_RESET_PASSWORD=true` is explicitly set. Administrators are redirected to `/admin` after login and can manage other users, while the application prevents an administrator from disabling or demoting their own account and prevents removing the last active administrator.
 
 After the first successful login, store the credentials in a password manager. Do not commit them to `.env`, source code, or GitHub.
+
+## Public SEO and Google Search Console
+
+The anonymous root route is a public, crawlable landing page. It includes a descriptive title and meta description, canonical URL, Open Graph metadata, JSON-LD for the organization, website, and web application, accessible content sections, internal links, and a public FAQ. Authenticated routes remain disallowed in `robots.txt`, while `/robots.txt` and `/sitemap.xml` are generated from `PUBLIC_SITE_URL`.
+
+Set `PUBLIC_SITE_URL` to the canonical Render URL. For the simplest Search Console ownership verification, copy the HTML-tag token Google gives you into `GOOGLE_SITE_VERIFICATION` and redeploy. The landing page will emit the required `<meta name="google-site-verification">` tag. Alternatively, set `GOOGLE_SITE_VERIFICATION_FILE` to Google's exact HTML filename and `GOOGLE_SITE_VERIFICATION_TOKEN` to its token; the application will serve the verification file from the site root.
+
+After deployment, open [Google Search Console](https://search.google.com/search-console), add a **URL-prefix property** for `https://damagesense-ai-1.onrender.com/`, complete ownership verification, open **Sitemaps**, submit `sitemap.xml`, then use **URL inspection** to request indexing for the homepage. Search Console submission requires the site owner's authenticated Google account and cannot be automated from the application.
 
 ## Email Notifications
 
