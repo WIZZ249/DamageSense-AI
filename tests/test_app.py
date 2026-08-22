@@ -88,7 +88,9 @@ def test_assess_upload_creates_report(client):
 
     assert r.status_code == 200
     data = r.get_json()
-    assert data['filename'] == 'building.png'
+    # Stored filename is now UUID-prefixed to avoid collisions between users;
+    # check it preserves the original name as a suffix instead of an exact match.
+    assert data['filename'].endswith('building.png')
     assert data['label']
     assert data['severity'] in {'CRITICAL', 'STABLE', 'UNKNOWN'}
 
@@ -99,7 +101,7 @@ def test_history_is_scoped_to_logged_in_user(client):
     client.post('/assess', data=make_image_upload('alpha.png'), content_type='multipart/form-data')
     alpha_history = client.get('/history').get_json()
     assert len(alpha_history) == 1
-    assert alpha_history[0]['filename'] == 'alpha.png'
+    assert alpha_history[0]['filename'].endswith('alpha.png')
 
     client.get('/logout')
     register(client, username='beta', email='beta@example.com')

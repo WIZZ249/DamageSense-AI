@@ -33,6 +33,12 @@ class Assessment(db.Model):
     label = db.Column(db.String(100), nullable=False)
     confidence = db.Column(db.Float, nullable=False)
     severity = db.Column(db.String(20), nullable=False)
+    # Repair-recommendation fields, populated from app/ai_engine.py's
+    # REPAIR_RECOMMENDATIONS lookup at assessment time so history rows carry
+    # the same guidance the user saw when the assessment was made.
+    urgency = db.Column(db.String(20), nullable=True)
+    recommendation_summary = db.Column(db.String(255), nullable=True)
+    recommendation_next_step = db.Column(db.Text, nullable=True)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
     user = db.relationship('User', back_populates='assessments')
@@ -44,5 +50,10 @@ class Assessment(db.Model):
             'label': self.label,
             'confidence': round(self.confidence, 2),
             'severity': self.severity,
+            'urgency': self.urgency,
+            'recommendation': {
+                'summary': self.recommendation_summary,
+                'next_step': self.recommendation_next_step,
+            },
             'timestamp': self.timestamp.strftime('%Y-%m-%d %H:%M:%S')
         }

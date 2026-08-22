@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Home | DamageSense AI</title>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -52,6 +53,7 @@
         .severity-badge { padding: 6px 14px; border-radius: 999px; font-weight: 700; font-size: 0.78rem; }
         .critical { background: rgba(239,68,68,0.15); color: #fecaca; border: 1px solid rgba(239,68,68,0.3); }
         .stable { background: rgba(34,197,94,0.15); color: #bbf7d0; border: 1px solid rgba(34,197,94,0.3); }
+        .unknown { background: rgba(234,179,8,0.15); color: #fde68a; border: 1px solid rgba(234,179,8,0.3); }
         .result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 18px; }
         .result-item { background: var(--card); border: 1px solid var(--border); border-radius: 7px; padding: 12px 16px; }
         .result-item-label { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; }
@@ -146,6 +148,11 @@
                     <div class="result-item"><div class="result-item-label">Severity</div><div class="result-item-value" id="resSeverity">-</div></div>
                     <div class="result-item"><div class="result-item-label">File</div><div class="result-item-value" id="resFile" style="font-size:0.78rem;word-break:break-all">-</div></div>
                 </div>
+                <div class="result-item" id="resRecommendation" style="margin-bottom:18px">
+                    <div class="result-item-label">Recommended Next Step</div>
+                    <div class="result-item-value" id="resRecSummary" style="margin-bottom:6px">-</div>
+                    <div style="color:var(--muted);font-size:0.85rem" id="resRecNextStep">-</div>
+                </div>
                 <button class="btn-new" type="button" onclick="newAssessment()">New Assessment</button>
             </div>
         </div>
@@ -157,7 +164,7 @@
         </div>
         <div id="historyEmpty" class="history-empty">No assessments yet.</div>
         <table class="history-table" id="historyTable" style="display:none">
-            <thead><tr><th>#</th><th>File</th><th>Classification</th><th>Confidence</th><th>Severity</th><th>Time</th></tr></thead>
+            <thead><tr><th>Image</th><th>File</th><th>Classification</th><th>Confidence</th><th>Severity</th><th>Recommendation</th><th>Time</th></tr></thead>
             <tbody id="historyBody"></tbody>
         </table>
     </section>
@@ -306,7 +313,12 @@
         document.getElementById('resultCard').style.display = 'none';
 
         try {
-            const response = await fetch('/assess', { method: 'POST', body: formData });
+            const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+            const response = await fetch('/assess', {
+                method: 'POST',
+                headers: { 'X-CSRFToken': csrfToken },
+                body: formData
+            });
             const data = await response.json();
 
             if (!response.ok || data.error) {
@@ -317,9 +329,25 @@
                 document.getElementById('resSeverity').textContent = data.severity;
                 document.getElementById('resFile').textContent = data.filename || selectedFilename;
 
+                const rec = data.recommendation || {};
+                document.getElementById('resRecSummary').textContent = rec.summary || 'No recommendation available.';
+                document.getElementById('resRecNextStep').textContent = rec.next_step || '';
+
                 const badge = document.getElementById('severityBadge');
-                badge.textContent = data.severity === 'CRITICAL' ? 'Critical Damage' : 'Stable';
-                badge.className = 'severity-badge ' + (data.severity === 'CRITICAL' ? 'critical' : 'stable');
+                if (data.severity === 'CRITICAL') {
+                    badge.textContent = 'Critical Damage';
+                    badge.className = 'severity-badge critical';
+                } else if (data.severity === 'STABLE') {
+                    badge.textContent = 'Stable';
+                    badge.className = 'severity-badge stable';
+                } else {
+                    badge.textContent = 'Needs Review';
+                    badge.className = 'severity-badge unknown';
+                }
+
+                if (data.label === 'analysis_error') {
+                    alert('Automated analysis failed for this image. It was saved, but you may want to retry with a clearer photo or request a manual inspection.');
+                }
 
                 document.getElementById('resultCard').style.display = 'block';
                 history.unshift(data);
@@ -361,13 +389,17 @@
         tbody.innerHTML = '';
         history.forEach(h => {
             const isCritical = h.severity === 'CRITICAL';
+            const isStable = h.severity === 'STABLE';
+            const badgeClass = isCritical ? 'critical' : (isStable ? 'stable' : 'unknown');
+            const rec = h.recommendation || {};
             tbody.innerHTML += `
                 <tr>
-                    <td style="color:var(--muted)">${h.id}</td>
-                    <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${h.filename}</td>
+                    <td><img src="/static/uploads/${encodeURIComponent(h.filename)}" alt="Assessment thumbnail" style="width:56px;height:56px;object-fit:cover;border-radius:6px;border:1px solid var(--border)" onerror="this.style.display='none'"></td>
+                    <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${h.filename}</td>
                     <td>${h.label}</td>
                     <td>${h.confidence}%</td>
-                    <td><span class="severity-badge ${isCritical ? 'critical' : 'stable'}">${h.severity}</span></td>
+                    <td><span class="severity-badge ${badgeClass}">${h.severity}</span></td>
+                    <td style="color:var(--muted);font-size:0.78rem;max-width:220px">${rec.summary || '-'}</td>
                     <td style="color:var(--muted);font-size:0.78rem">${h.timestamp}</td>
                 </tr>`;
         });

@@ -1,5 +1,7 @@
 flask==3.0.0
 flask-sqlalchemy==3.1.1
+flask-wtf==1.2.1
+flask-limiter==3.8.0
 Werkzeug==3.1.6
 pillow==10.2.0
 numpy==1.26.4
@@ -7,7 +9,12 @@ python-dotenv==1.0.0
 gunicorn==21.2.0
 pytest==8.0.0
 Jinja2==3.1.6
-ultralytics==8.0.223
-torch==2.1.2
-torchvision==0.16.2
-tensorflow==2.16.2
+
+# Local TFLite inference (app/ai_engine.py) is fully optional and guarded by
+# try/except at import time. `tflite-runtime` is no longer published on PyPI
+# for current Python versions, so it is NOT pinned here. If you want local
+# on-device inference instead of/alongside Roboflow, install a working TFLite
+# runtime for your platform manually (e.g. `ai-edge-litert`, or full
+# `tensorflow` if size isn't a concern) and set DAMAGE_TFLITE_MODEL_PATH.
+# Without it, the app uses Roboflow (if configured) or the built-in
+# Pillow/NumPy heuristic fallback — both work with the dependencies above only.

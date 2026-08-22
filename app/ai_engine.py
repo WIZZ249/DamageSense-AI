@@ -7,10 +7,14 @@ import urllib.request
 from pathlib import Path
 
 import numpy as np
-from PIL import Image
-from ultralytics import YOLO
+from PIL import Image, ImageOps
 
-# Optional local TensorFlow Lite model. Set DAMAGE_TFLITE_MODEL_PATH to enable it.
+# ---------------------------------------------------------------------------
+# Local TFLite model (optional). Set DAMAGE_TFLITE_MODEL_PATH to enable it.
+# Uses the lightweight `tflite-runtime` package instead of full TensorFlow
+# (a few MB instead of several hundred MB) so this stays deployable on
+# Render's free tier.
+# ---------------------------------------------------------------------------
 TFLITE_MODEL_PATH = Path(os.getenv('DAMAGE_TFLITE_MODEL_PATH', '')).expanduser() if os.getenv('DAMAGE_TFLITE_MODEL_PATH') else None
 TFLITE_LABELS_PATH = Path(os.getenv('DAMAGE_TFLITE_LABELS_PATH', 'models/labels.txt')).expanduser()
 TFLITE_CONFIDENCE_THRESHOLD = float(os.getenv('DAMAGE_TFLITE_CONFIDENCE', '0.35'))
@@ -31,9 +35,14 @@ def _load_tflite():
         return False
 
     try:
-        import tensorflow as tf
+        try:
+            from tflite_runtime.interpreter import Interpreter
+        except ImportError:
+            # Falls back to full tensorflow only if it happens to be installed;
+            # tflite-runtime is the supported/expected path in requirements.txt.
+            from tensorflow.lite import Interpreter
 
-        _tflite_interpreter = tf.lite.Interpreter(model_path=str(TFLITE_MODEL_PATH), num_threads=2)
+        _tflite_interpreter = Interpreter(model_path=str(TFLITE_MODEL_PATH), num_threads=2)
         _tflite_interpreter.allocate_tensors()
         _tflite_input_details = _tflite_interpreter.get_input_details()
         _tflite_output_details = _tflite_interpreter.get_output_details()
@@ -58,7 +67,6 @@ def _tflite_preprocess(image, input_detail):
     image = image.resize((width, height), Image.Resampling.BILINEAR)
     array = np.asarray(image, dtype=np.float32)
 
-    # Quantized models need uint8/int8 input. Float models use normalized pixels.
     dtype = input_detail['dtype']
     if dtype == np.uint8:
         scale, zero_point = input_detail.get('quantization', (0.0, 0))
@@ -73,7 +81,6 @@ def _tflite_preprocess(image, input_detail):
             array = array - 128
         array = np.clip(array, -128, 127).astype(np.int8)
     else:
-        # Most float damage classifiers expect [0, 1]. Allow configurable mode.
         if os.getenv('DAMAGE_TFLITE_NORMALIZE', '0_1') == 'minus1_1':
             array = array / 127.5 - 1.0
         else:
@@ -95,26 +102,23 @@ def classify_with_tflite(file_bytes):
         return None
 
     try:
-        image = Image.open(io.BytesIO(file_bytes)).convert('RGB')
+        image = _open_image(file_bytes)
         input_detail = _tflite_input_details[0]
         input_tensor = _tflite_preprocess(image, input_detail)
         _tflite_interpreter.set_tensor(input_detail['index'], input_tensor)
         _tflite_interpreter.invoke()
 
-        # Classification models normally expose one [1, classes] tensor.
         output = _tflite_interpreter.get_tensor(_tflite_output_details[0]['index'])
         scores = np.asarray(output).squeeze()
         if scores.ndim != 1:
             return None
 
-        # Dequantize output when necessary.
         output_detail = _tflite_output_details[0]
         if np.issubdtype(scores.dtype, np.integer):
             scale, zero_point = output_detail.get('quantization', (0.0, 0))
             if scale:
                 scores = (scores.astype(np.float32) - zero_point) * scale
 
-        # Handle logits as well as probability outputs.
         scores = scores.astype(np.float32)
         if np.any(scores < 0) or float(scores.sum()) > 1.01:
             scores = np.exp(scores - np.max(scores))
@@ -131,12 +135,6 @@ def classify_with_tflite(file_bytes):
         print(f'TFLite inference error: {exc}')
         return None
 
-
-# Initialize YOLOv8 model lazily for fallback operation.
-try:
-    model = YOLO('yolov8n.pt')
-except Exception:
-    model = None
 
 DAMAGE_LABELS = {
     'destroyed': ('destroyed_structure', 'CRITICAL'),
@@ -156,6 +154,61 @@ DAMAGE_LABELS = {
     'undamaged': ('no_visible_damage', 'STABLE'),
     'intact': ('no_visible_damage', 'STABLE'),
 }
+
+# ---------------------------------------------------------------------------
+# Repair recommendations — surfaced alongside every assessment result so the
+# app carries the user from "here's the damage" to "here's what to do about
+# it," not just a bare label.
+# ---------------------------------------------------------------------------
+REPAIR_RECOMMENDATIONS = {
+    'no_visible_damage': {
+        'urgency': 'NONE',
+        'repair_category': 'none',
+        'summary': 'No visible structural damage detected.',
+        'next_step': 'No action required. Re-assess after any future incident (storm, quake, flood) that may affect this structure.',
+    },
+    'minor_structural_damage': {
+        'urgency': 'LOW',
+        'repair_category': 'cosmetic_or_minor_structural',
+        'summary': 'Minor damage detected — small cracks, holes, or surface-level issues.',
+        'next_step': 'Monitor the affected area. Schedule a routine inspection by a local contractor within the next few weeks; not an emergency.',
+    },
+    'major_structural_damage': {
+        'urgency': 'HIGH',
+        'repair_category': 'structural',
+        'summary': 'Significant structural damage detected — likely affecting load-bearing elements.',
+        'next_step': 'Restrict access to the affected area. Arrange a professional structural inspection as soon as possible before the space is reoccupied.',
+    },
+    'collapsed_structure': {
+        'urgency': 'CRITICAL',
+        'repair_category': 'structural_severe',
+        'summary': 'Partial or full structural collapse detected.',
+        'next_step': 'Do not enter the structure. Contact local emergency services and a structural engineer immediately.',
+    },
+    'destroyed_structure': {
+        'urgency': 'CRITICAL',
+        'repair_category': 'total_loss',
+        'summary': 'The structure appears destroyed or unsalvageable.',
+        'next_step': 'Treat as a total loss for safety purposes. Contact emergency services, document for insurance/aid purposes, and await professional clearance before any access.',
+    },
+    'unknown_damage_state': {
+        'urgency': 'UNKNOWN',
+        'repair_category': 'unknown',
+        'summary': 'Damage state could not be confidently determined from this image.',
+        'next_step': 'Retake the photo with better lighting and a clearer view of the structure, or request a manual/professional inspection.',
+    },
+    'analysis_error': {
+        'urgency': 'UNKNOWN',
+        'repair_category': 'unknown',
+        'summary': 'Automated analysis failed for this image.',
+        'next_step': 'Try re-uploading the image. If this keeps happening, request a manual inspection.',
+    },
+}
+
+
+def get_repair_recommendation(label: str) -> dict:
+    """Look up repair guidance for a normalized damage label, with a safe default."""
+    return REPAIR_RECOMMENDATIONS.get(label, REPAIR_RECOMMENDATIONS['unknown_damage_state'])
 
 
 def normalize_damage_prediction(label, confidence):
@@ -194,14 +247,14 @@ def classify_with_roboflow(file_bytes):
             'overlap': os.getenv('ROBOFLOW_OVERLAP', '30'),
         })
         url = f'https://detect.roboflow.com/{model_id}?{params}'
-        request = urllib.request.Request(
+        req = urllib.request.Request(
             url,
             data=encoded_image.encode('utf-8'),
             headers={'Content-Type': 'application/x-www-form-urlencoded'},
             method='POST',
         )
 
-        with urllib.request.urlopen(request, timeout=20) as response:
+        with urllib.request.urlopen(req, timeout=20) as response:
             payload = json.loads(response.read().decode('utf-8'))
 
         predictions = payload.get('predictions') or []
@@ -224,69 +277,82 @@ def classify_with_roboflow(file_bytes):
         return None
 
 
-def classify_with_yolo(file_bytes):
-    """Fallback object detection using the existing YOLOv8 model."""
-    if model is None:
-        return None
+def _open_image(file_bytes):
+    """Open an image and correct for EXIF rotation (common on phone photos)."""
+    image = Image.open(io.BytesIO(file_bytes)).convert('RGB')
+    return ImageOps.exif_transpose(image)
 
+
+def classify_with_heuristic(file_bytes):
+    """
+    Lightweight, dependency-free fallback used when neither a local TFLite
+    model nor Roboflow is configured. This replaces the previous YOLOv8/COCO
+    fallback, which could never detect damage because COCO's generic object
+    classes (person, car, dog, ...) never match damage keywords.
+
+    Uses simple, explainable image statistics as a rough proxy for damage
+    severity: edge density (cracks/debris create high-frequency edges),
+    dark-region ratio (shadowed rubble/voids), and color variance (uniform,
+    intact surfaces are more color-consistent than debris fields). This is
+    intentionally conservative and clearly labeled as a fallback in its
+    'model' field — it is NOT a substitute for a trained damage classifier
+    or a Roboflow model, and should be treated as a rough triage signal only.
+    """
     try:
-        img = Image.open(io.BytesIO(file_bytes)).convert('RGB')
-        results = model(img, conf=0.25, verbose=False)
-        if not results:
-            return None
+        image = _open_image(file_bytes)
+        image = image.resize((256, 256), Image.Resampling.BILINEAR)
+        gray = np.asarray(image.convert('L'), dtype=np.float32)
+        rgb = np.asarray(image, dtype=np.float32)
 
-        detected_classes = []
-        confidences = []
-        for result in results:
-            if result.boxes is None or len(result.boxes) == 0:
-                continue
-            for box in result.boxes:
-                class_id = int(box.cls)
-                detected_classes.append(result.names.get(class_id, 'unknown').lower())
-                confidences.append(float(box.conf))
+        gx = np.abs(np.diff(gray, axis=1))
+        gy = np.abs(np.diff(gray, axis=0))
+        edge_density = (np.mean(gx) + np.mean(gy)) / 2.0
 
-        if not detected_classes:
-            return {'label': 'no_visible_damage', 'confidence': 0.0, 'severity': 'STABLE', 'model': 'yolov8_vision'}
+        dark_ratio = float(np.mean(gray < 60))
+        color_std = float(np.mean(np.std(rgb, axis=(0, 1))))
 
-        damage_indicators = ['debris', 'rubble', 'broken', 'damaged', 'collapsed', 'destroyed']
-        damage_count = sum(1 for cls in detected_classes if any(ind in cls for ind in damage_indicators))
-        avg_confidence = float(np.mean(confidences)) if confidences else 0.0
+        score = (
+            min(edge_density / 40.0, 1.0) * 45
+            + min(dark_ratio * 2.0, 1.0) * 30
+            + min(color_std / 70.0, 1.0) * 25
+        )
 
-        if damage_count > len(detected_classes) * 0.5:
+        if score >= 65:
             label, severity = 'major_structural_damage', 'CRITICAL'
-            confidence = min(95.0, 60 + (damage_count / len(detected_classes)) * 35)
-        elif damage_count > 0:
-            label, severity, confidence = 'minor_structural_damage', 'STABLE', avg_confidence * 100
+        elif score >= 35:
+            label, severity = 'minor_structural_damage', 'STABLE'
         else:
-            label, severity, confidence = 'no_visible_damage', 'STABLE', avg_confidence * 100
+            label, severity = 'no_visible_damage', 'STABLE'
+
+        confidence = min(60.0, 30.0 + abs(score - 50) * 0.6)
 
         return {
             'label': label,
             'confidence': round(confidence, 2),
             'severity': severity,
-            'model': 'yolov8_vision',
-            'detected_objects': detected_classes[:5]
+            'model': 'heuristic_fallback',
+            'note': 'Local heuristic estimate only — configure Roboflow or a trained TFLite model for reliable results.',
         }
     except Exception as exc:
-        print(f'YOLOv8 inference error: {exc}')
+        print(f'Heuristic fallback error: {exc}')
         return None
 
 
 def classify_image(file_bytes: bytes) -> dict:
-    """Assess damage with this priority: local TFLite -> Roboflow -> YOLOv8."""
+    """Assess damage with this priority: local TFLite -> Roboflow -> heuristic fallback."""
     tflite_result = classify_with_tflite(file_bytes)
     if tflite_result and tflite_result.get('confidence', 0) >= TFLITE_CONFIDENCE_THRESHOLD * 100:
-        return tflite_result
+        result = tflite_result
+    else:
+        professional_result = classify_with_roboflow(file_bytes)
+        if professional_result:
+            result = professional_result
+        else:
+            heuristic_result = classify_with_heuristic(file_bytes)
+            result = heuristic_result or {
+                'label': 'analysis_error', 'confidence': 0.0,
+                'severity': 'UNKNOWN', 'model': 'unavailable'
+            }
 
-    professional_result = classify_with_roboflow(file_bytes)
-    if professional_result:
-        return professional_result
-
-    yolo_result = classify_with_yolo(file_bytes)
-    if yolo_result:
-        return yolo_result
-
-    return {
-        'label': 'analysis_error', 'confidence': 0.0,
-        'severity': 'UNKNOWN', 'model': 'unavailable'
-    }
+    result['recommendation'] = get_repair_recommendation(result['label'])
+    return result

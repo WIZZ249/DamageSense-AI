@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /login
+Allow: /register
+Disallow: /home
+Disallow: /assess
+Disallow: /history
+Disallow: /api/
+Disallow: /static/uploads/
+
+Sitemap: https://YOUR-DOMAIN-HERE/sitemap.xml
