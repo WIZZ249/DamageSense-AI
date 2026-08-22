@@ -30,10 +30,29 @@ def current_user():
 def login_required(view):
     @wraps(view)
     def wrapped_view(*args, **kwargs):
-        if current_user() is None:
+        user = current_user()
+        if user is None or not user.is_active:
+            session.clear()
             if wants_json_response():
                 return jsonify({'error': 'Authentication required'}), 401
             return redirect(url_for('main.login', next=request.path))
+        return view(*args, **kwargs)
+    return wrapped_view
+
+
+def admin_required(view):
+    @wraps(view)
+    def wrapped_view(*args, **kwargs):
+        user = current_user()
+        if user is None or not user.is_active:
+            session.clear()
+            if wants_json_response():
+                return jsonify({'error': 'Authentication required'}), 401
+            return redirect(url_for('main.login', next=request.path))
+        if not user.is_admin:
+            if wants_json_response():
+                return jsonify({'error': 'Administrator access required'}), 403
+            return render_template('error.html', code=403, title='Admin access required', message='This area is restricted to administrators.'), 403
         return view(*args, **kwargs)
     return wrapped_view
 
@@ -94,10 +113,10 @@ def login():
         password = request.form.get('password', '')
         user = User.query.filter((User.username == identity) | (User.email == identity.lower())).first()
 
-        if user and user.check_password(password):
+        if user and user.is_active and user.check_password(password):
             session.clear()
             session['user_id'] = user.id
-            return redirect(request.args.get('next') or url_for('main.home'))
+            return redirect(request.args.get('next') or (url_for('main.admin') if user.is_admin else url_for('main.home')))
 
         flash('Invalid username, email, or password.', 'error')
 
@@ -108,6 +127,54 @@ def login():
 def logout():
     session.clear()
     return redirect(url_for('main.login'))
+
+
+@main.route('/admin')
+@admin_required
+def admin():
+    users = User.query.order_by(User.created_at.desc(), User.id.desc()).all()
+    return render_template(
+        'admin.html',
+        users=users,
+        total_users=User.query.count(),
+        active_users=User.query.filter_by(is_active=True).count(),
+        admin_users=User.query.filter_by(role='admin').count(),
+        total_assessments=Assessment.query.count(),
+    )
+
+
+@main.route('/admin/users/<int:user_id>/toggle-active', methods=['POST'])
+@admin_required
+def toggle_user_active(user_id):
+    target = db.session.get(User, user_id)
+    actor = current_user()
+    if target is None:
+        flash('User not found.', 'error')
+    elif target.id == actor.id:
+        flash('You cannot deactivate your own administrator account.', 'error')
+    else:
+        target.is_active = not target.is_active
+        db.session.commit()
+        flash(f'{target.username} is now {"active" if target.is_active else "disabled"}.', 'success')
+    return redirect(url_for('main.admin'))
+
+
+@main.route('/admin/users/<int:user_id>/toggle-role', methods=['POST'])
+@admin_required
+def toggle_user_role(user_id):
+    target = db.session.get(User, user_id)
+    actor = current_user()
+    if target is None:
+        flash('User not found.', 'error')
+    elif target.id == actor.id:
+        flash('You cannot change your own administrator role.', 'error')
+    elif target.is_admin and User.query.filter_by(role='admin', is_active=True).count() <= 1:
+        flash('Keep at least one active administrator account.', 'error')
+    else:
+        target.role = 'user' if target.is_admin else 'admin'
+        db.session.commit()
+        flash(f'{target.username} is now an {"administrator" if target.is_admin else "standard user"}.', 'success')
+    return redirect(url_for('main.admin'))
 
 
 @main.route('/home')

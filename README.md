@@ -5,6 +5,7 @@ DamageSense AI is a Flask dashboard for rapid structural damage assessment. User
 ## What It Does
 
 - User registration and login
+- Secure administrator console with user directory, role management, and account activation controls
 - Private per-user assessment dashboards
 - Image upload assessment
 - Live camera capture assessment on HTTPS deployments
@@ -37,7 +38,9 @@ DamageSense-AI/
 ├── templates/
 │   ├── login.html
 │   ├── register.html
-│   └── upload.html
+│   ├── upload.html
+│   ├── admin.html
+│   └── error.html
 ├── tests/test_app.py
 ├── .env.example
 ├── requirements.txt
@@ -68,6 +71,9 @@ Open `http://localhost:5000`.
 | `GET/POST` | `/login` | Log in |
 | `GET` | `/logout` | Log out |
 | `GET` | `/home` | User dashboard |
+| `GET` | `/admin` | Administrator user-management console |
+| `POST` | `/admin/users/<id>/toggle-active` | Enable or disable a user (administrator only) |
+| `POST` | `/admin/users/<id>/toggle-role` | Promote or demote a user (administrator only) |
 | `POST` | `/assess` | Upload or camera-captured image assessment |
 | `GET` | `/history` | Current user's latest 50 assessments |
 | `GET` | `/health` | Health check |
@@ -98,6 +104,20 @@ Recommended datasets and model families:
 - YOLO segmentation for fast object-level field use
 - SegFormer for stronger semantic segmentation quality
 
+## Administrator Access
+
+The app provisions an administrator from environment variables at startup. This keeps credentials out of the repository and works with Render deploys. Add the following variables in the Render service environment settings, then deploy from `main`:
+
+```text
+ADMIN_USERNAME=admin
+ADMIN_EMAIL=admin@example.com
+ADMIN_PASSWORD=use-a-long-unique-password
+```
+
+The account is created if it does not exist, or promoted to administrator if the email or username already exists. The password is not changed on later deploys unless `ADMIN_RESET_PASSWORD=true` is explicitly set. Administrators are redirected to `/admin` after login and can manage other users, while the application prevents an administrator from disabling or demoting their own account and prevents removing the last active administrator.
+
+After the first successful login, store the credentials in a password manager. Do not commit them to `.env`, source code, or GitHub.
+
 ## Camera Capture
 
 The dashboard includes a `Take Picture` mode. Browser camera access requires HTTPS, which Render provides on deployed services. On phones, the upload field also hints to open the device camera.
@@ -118,9 +138,10 @@ gunicorn run:app --timeout 120 --workers 1
 ```
 
 3. Add environment variables from `.env.example`.
-4. Deploy from `main`.
+4. Add the administrator variables from the section above, using a unique password stored in a password manager.
+5. Deploy from `main`.
 
-For serious production use, replace SQLite with PostgreSQL so user accounts and assessment history persist reliably across restarts.
+For serious production use, replace SQLite with PostgreSQL so user accounts and assessment history persist reliably across restarts. If you already have a persistent Render disk attached, keep the SQLite database and upload folder on that disk.
 
 ## License
 

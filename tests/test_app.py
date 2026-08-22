@@ -4,6 +4,7 @@ import pytest
 from PIL import Image
 
 from app import create_app, db
+from app.models import User
 
 
 @pytest.fixture
@@ -107,3 +108,69 @@ def test_history_is_scoped_to_logged_in_user(client):
     register(client, username='beta', email='beta@example.com')
     beta_history = client.get('/history').get_json()
     assert beta_history == []
+
+
+def make_admin_app(tmp_path, monkeypatch):
+    monkeypatch.setenv('ADMIN_USERNAME', 'operations_admin')
+    monkeypatch.setenv('ADMIN_EMAIL', 'operations@example.com')
+    monkeypatch.setenv('ADMIN_PASSWORD', 'secure-admin-password')
+    return create_app({
+        'TESTING': True,
+        'SQLALCHEMY_DATABASE_URI': f"sqlite:///{tmp_path / 'admin.db'}",
+        'UPLOAD_FOLDER': str(tmp_path / 'uploads'),
+        'WTF_CSRF_ENABLED': False,
+    })
+
+
+def test_configured_admin_is_provisioned_and_redirects_to_console(tmp_path, monkeypatch):
+    """Render environment variables should create a working administrator account."""
+    app = make_admin_app(tmp_path, monkeypatch)
+    with app.app_context():
+        admin = User.query.filter_by(email='operations@example.com').first()
+        assert admin is not None
+        assert admin.is_admin is True
+        assert admin.is_active is True
+        assert admin.check_password('secure-admin-password')
+    with app.test_client() as admin_client:
+        response = admin_client.post('/login', data={
+            'identity': 'operations_admin',
+            'password': 'secure-admin-password',
+        })
+        assert response.status_code == 302
+        assert response.headers['Location'].endswith('/admin')
+        assert admin_client.get('/admin').status_code == 200
+
+
+def test_standard_user_cannot_access_admin_console(client):
+    """The admin console must reject authenticated standard users."""
+    register(client)
+    response = client.get('/admin')
+    assert response.status_code == 403
+    assert b'Admin access required' in response.data
+
+
+def test_admin_can_toggle_user_status_and_role_but_not_self(tmp_path, monkeypatch):
+    """Admins can manage other users while self-protection remains enforced."""
+    app = make_admin_app(tmp_path, monkeypatch)
+    with app.app_context():
+        other = User(username='other_user', email='other@example.com')
+        other.set_password('password123')
+        db.session.add(other)
+        db.session.commit()
+        other_id = other.id
+        admin_id = User.query.filter_by(username='operations_admin').first().id
+
+    with app.test_client() as admin_client:
+        admin_client.post('/login', data={'identity': 'operations_admin', 'password': 'secure-admin-password'})
+        assert admin_client.post(f'/admin/users/{other_id}/toggle-role').status_code == 302
+        assert admin_client.post(f'/admin/users/{other_id}/toggle-active').status_code == 302
+        with app.app_context():
+            other = db.session.get(User, other_id)
+            assert other.is_admin is True
+            assert other.is_active is False
+        admin_client.post(f'/admin/users/{admin_id}/toggle-active')
+        admin_client.post(f'/admin/users/{admin_id}/toggle-role')
+        with app.app_context():
+            admin = db.session.get(User, admin_id)
+            assert admin.is_admin is True
+            assert admin.is_active is True

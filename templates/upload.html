@@ -277,6 +277,7 @@
             <div class="topbar-meta">
                 <span class="workspace-pill">Inspection workspace</span>
                 <span class="live-state"><span class="live-dot" aria-hidden="true"></span> Systems ready</span>
+                {% if current_user.is_admin %}<a class="logout-link" href="{{ url_for('main.admin') }}">Admin console</a>{% endif %}
                 <span class="user-chip"><span class="user-avatar" aria-hidden="true">{{ current_user.username[0]|upper }}</span>{{ current_user.username }}</span>
                 <a class="logout-link" href="{{ url_for('main.logout') }}">Log out</a>
             </div>

@@ -13,6 +13,8 @@ class User(db.Model):
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(255), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
+    role = db.Column(db.String(20), nullable=False, default='user', server_default='user')
+    is_active = db.Column(db.Boolean, nullable=False, default=True, server_default='1')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     assessments = db.relationship('Assessment', back_populates='user', cascade='all, delete-orphan')
 
@@ -21,6 +23,10 @@ class User(db.Model):
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
+
+    @property
+    def is_admin(self):
+        return self.role == 'admin'
 
 
 class Assessment(db.Model):

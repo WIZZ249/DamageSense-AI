@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ code }} | DamageSense AI</title>
+    <style>
+        :root { --canvas:#08111f; --surface:#101e32; --line:rgba(145,169,201,.2); --ink:#f4f7fb; --muted:#8f9bad; --cyan:#55d6d2; }
+        * { box-sizing:border-box; }
+        body { min-height:100vh; margin:0; display:grid; place-items:center; padding:24px; color:var(--ink); background:radial-gradient(circle at 50% 0,rgba(85,214,210,.12),transparent 28rem),var(--canvas); font:16px/1.5 system-ui,sans-serif; }
+        main { width:min(100%,460px); padding:36px; border:1px solid var(--line); border-radius:20px; background:var(--surface); text-align:center; box-shadow:0 24px 70px rgba(0,0,0,.28); }
+        .code { margin:0 0 8px; color:var(--cyan); font-size:3.5rem; font-weight:800; letter-spacing:-.06em; }
+        h1 { margin:0 0 10px; font-size:1.35rem; }
+        p { margin:0 0 24px; color:var(--muted); font-size:.9rem; }
+        a { display:inline-block; padding:11px 16px; border-radius:10px; color:#07151c; background:var(--cyan); text-decoration:none; font-weight:700; }
+    </style>
+</head>
+<body><main><div class="code">{{ code }}</div><h1>{{ title }}</h1><p>{{ message }}</p><a href="{{ url_for('main.home') if current_user else url_for('main.login') }}">{{ 'Back to workspace' if current_user else 'Return to login' }}</a></main></body>
+</html>
