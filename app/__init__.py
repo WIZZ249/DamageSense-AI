@@ -20,7 +20,8 @@ _USER_COLUMN_ADDITIONS = {
     'is_active': 'BOOLEAN NOT NULL DEFAULT TRUE',
     'reset_token_hash': 'VARCHAR(64)',
     'reset_token_expires_at': 'DATETIME',
-    'email_verified': 'BOOLEAN NOT NULL DEFAULT FALSE',
+    # Existing accounts are trusted during migration so this feature does not lock out current users.
+    'email_verified': 'BOOLEAN NOT NULL DEFAULT TRUE',
     'verification_token_hash': 'VARCHAR(64)',
     'verification_token_expires_at': 'DATETIME',
 }
