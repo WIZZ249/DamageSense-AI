@@ -22,7 +22,7 @@ from werkzeug.utils import secure_filename
 
 from . import limiter
 from .ai_engine import classify_image
-from .email_service import email_enabled, send_password_reset_email, send_registration_email
+from .email_service import email_enabled, send_email_verification_email, send_password_reset_email, send_registration_email
 from .models import Assessment, AuditLog, User, db
 
 main = Blueprint('main', __name__)
@@ -154,11 +154,20 @@ def register():
         elif User.query.filter((func.lower(User.username) == username.lower()) | (func.lower(User.email) == email)).first():
             flash('An account with that username or email already exists.', 'error')
         else:
-            user = User(username=username, email=email)
+            user = User(username=username, email=email, email_verified=not current_app.config.get('REQUIRE_EMAIL_VERIFICATION', True))
             user.set_password(password)
             db.session.add(user)
             db.session.commit()
             record_audit('user_registered', target=user)
+            if current_app.config.get('REQUIRE_EMAIL_VERIFICATION', True):
+                raw_token = secrets.token_urlsafe(32)
+                user.verification_token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
+                user.verification_token_expires_at = datetime.utcnow() + timedelta(hours=24)
+                db.session.commit()
+                verification_url = url_for('main.verify_email', token=raw_token, _external=True)
+                send_email_verification_email(user, verification_url)
+                flash('Account created. Check your email and verify your address before signing in.', 'success')
+                return redirect(url_for('main.login'))
             send_registration_email(user)
             session.clear()
             session['user_id'] = user.id
@@ -166,6 +175,23 @@ def register():
             return redirect(url_for('main.home'))
 
     return render_template('register.html')
+
+
+@main.route('/verify-email/<token>')
+@limiter.limit('10 per hour')
+def verify_email(token):
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    user = User.query.filter_by(verification_token_hash=token_hash).first()
+    is_valid = bool(user and user.verification_token_expires_at and user.verification_token_expires_at > datetime.utcnow())
+    if not is_valid:
+        return render_template('error.html', code=400, title='Verification link expired', message='This verification link is invalid or has expired. Request a new account verification email.'), 400
+    user.email_verified = True
+    user.verification_token_hash = None
+    user.verification_token_expires_at = None
+    db.session.commit()
+    record_audit('email_verified', target=user)
+    flash('Your email is verified. You can now sign in.', 'success')
+    return redirect(url_for('main.login'))
 
 
 @main.route('/login', methods=['GET', 'POST'])
@@ -180,7 +206,9 @@ def login():
         normalized_identity = identity.lower()
         user = User.query.filter((func.lower(User.username) == normalized_identity) | (func.lower(User.email) == normalized_identity)).first()
 
-        if user and user.is_active and user.check_password(password):
+        if user and not user.email_verified and current_app.config.get('REQUIRE_EMAIL_VERIFICATION', True):
+            flash('Please verify your email address before signing in.', 'error')
+        elif user and user.is_active and user.check_password(password):
             record_audit('login_success', actor=user)
             session.clear()
             session['user_id'] = user.id

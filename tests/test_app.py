@@ -14,6 +14,7 @@ def client(tmp_path):
         'SQLALCHEMY_DATABASE_URI': 'sqlite:///:memory:',
         'UPLOAD_FOLDER': str(tmp_path / 'uploads'),
         'WTF_CSRF_ENABLED': False,
+        'REQUIRE_EMAIL_VERIFICATION': False,
     })
 
     with app.test_client() as client:
@@ -100,6 +101,28 @@ def test_login_page_is_not_cacheable_after_logout(client):
     response = client.get('/login?logged_out=1')
     assert response.headers['Cache-Control'].startswith('no-store')
     assert response.headers['Pragma'] == 'no-cache'
+
+
+def test_email_verification_gate_and_link(client, monkeypatch):
+    client.application.config['REQUIRE_EMAIL_VERIFICATION'] = True
+    sent = {}
+    monkeypatch.setattr('app.routes.send_email_verification_email', lambda user, url: sent.setdefault('url', url) or True)
+    response = client.post('/register', data={
+        'username': 'verified_user', 'email': 'verified@example.com',
+        'password': 'password123', 'confirm_password': 'password123',
+    }, follow_redirects=False)
+    assert response.status_code == 302
+    assert response.location.endswith('/login')
+    with client.application.app_context():
+        user = User.query.filter_by(email='verified@example.com').first()
+        assert user is not None and user.email_verified is False
+    verification_path = '/' + sent['url'].split('/', 3)[3]
+    verified = client.get(verification_path, follow_redirects=True)
+    assert verified.status_code == 200
+    assert b'Your email is verified' in verified.data
+    login = client.post('/login', data={'identity': 'verified@example.com', 'password': 'password123'}, follow_redirects=True)
+    assert login.status_code == 200
+    assert b"verified_user's Assessment Home" in login.data
 
 
 def test_assess_requires_login(client):

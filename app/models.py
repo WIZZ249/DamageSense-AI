@@ -18,6 +18,9 @@ class User(db.Model):
     is_active = db.Column(db.Boolean, nullable=False, default=True, server_default='1')
     reset_token_hash = db.Column(db.String(64), nullable=True, index=True)
     reset_token_expires_at = db.Column(db.DateTime, nullable=True)
+    email_verified = db.Column(db.Boolean, nullable=False, default=False, server_default='0')
+    verification_token_hash = db.Column(db.String(64), nullable=True, index=True)
+    verification_token_expires_at = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     assessments = db.relationship('Assessment', back_populates='user', cascade='all, delete-orphan')
 

@@ -159,7 +159,12 @@ After deployment, open [Google Search Console](https://search.google.com/search-
 
 ## Email Notifications
 
-Set the following variables in Render to enable registration and password-reset emails through SendGrid's v3 Mail Send API. Use a verified sender/domain and a key with Mail Send permission.
+Set the following variables in Render to enable registration, account-verification, and password-reset emails through SendGrid's v3 Mail Send API. Use a verified sender/domain and a key with Mail Send permission. In production, account verification is enabled by default; a new user receives a one-time verification link and must click it before signing in.
+
+```text
+REQUIRE_EMAIL_VERIFICATION=true
+```
+
 
 ```text
 SENDGRID_API_KEY=your_sendgrid_api_key

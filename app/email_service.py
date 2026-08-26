@@ -59,3 +59,12 @@ def send_password_reset_email(user, reset_url):
         f'We received a request to reset your DamageSense AI password. Use this link within one hour:\n\n{reset_url}\n\nIf you did not request this, you can ignore this email.',
         f'<p>We received a request to reset your DamageSense AI password.</p><p><a href="{reset_url}">Reset your password</a></p><p>This link expires in one hour. If you did not request this, you can ignore this email.</p>',
     )
+
+
+def send_email_verification_email(user, verification_url):
+    return send_transactional_email(
+        user.email,
+        'Verify your DamageSense AI account',
+        f'Hi {user.username},\n\nVerify your DamageSense AI account using this link within 24 hours:\n\n{verification_url}\n\nIf you did not create this account, you can ignore this email.\n\nRegards,\nDamageSense AI',
+        f'<p>Hi {user.username},</p><p>Verify your DamageSense AI account using the link below within 24 hours:</p><p><a href="{verification_url}">Verify my email address</a></p><p>If you did not create this account, you can ignore this email.</p><p>Regards,<br>DamageSense AI</p>',
+    )

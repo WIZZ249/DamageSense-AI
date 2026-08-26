@@ -20,6 +20,9 @@ _USER_COLUMN_ADDITIONS = {
     'is_active': 'BOOLEAN NOT NULL DEFAULT TRUE',
     'reset_token_hash': 'VARCHAR(64)',
     'reset_token_expires_at': 'DATETIME',
+    'email_verified': 'BOOLEAN NOT NULL DEFAULT FALSE',
+    'verification_token_hash': 'VARCHAR(64)',
+    'verification_token_expires_at': 'DATETIME',
 }
 
 _ASSESSMENT_COLUMN_ADDITIONS = {
@@ -88,13 +91,14 @@ def provision_admin_from_env(app):
 
     user = user_by_email or user_by_username
     if user is None:
-        user = User(username=username, email=email, role='admin', is_active=True)
+        user = User(username=username, email=email, role='admin', is_active=True, email_verified=True)
         user.set_password(password)
         db.session.add(user)
         app.logger.info('Provisioned configured admin account: %s', email)
     else:
         user.role = 'admin'
         user.is_active = True
+        user.email_verified = True
         if reset_password:
             user.set_password(password)
         app.logger.info('Verified configured admin access for: %s', user.email)
@@ -120,6 +124,7 @@ def create_app(config=None):
         SECRET_KEY=secret_key,
         SQLALCHEMY_DATABASE_URI=database_url,
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
+        REQUIRE_EMAIL_VERIFICATION=os.getenv('REQUIRE_EMAIL_VERIFICATION', 'true').lower() in {'1', 'true', 'yes'},
         UPLOAD_FOLDER=os.getenv('UPLOAD_FOLDER', 'app/static/uploads'),
         MAX_CONTENT_LENGTH=max_upload_mb * 1024 * 1024,
         SESSION_COOKIE_HTTPONLY=True,
