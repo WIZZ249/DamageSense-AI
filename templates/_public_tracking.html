@@ -1,0 +1,34 @@
+{% if google_analytics_id %}
+<script>
+  (function () {
+    const consentKey = 'damagesense_cookie_consent';
+    const loadAnalytics = function () {
+      if (window.__damageSenseAnalyticsLoaded) return;
+      window.__damageSenseAnalyticsLoaded = true;
+      window.dataLayer = window.dataLayer || [];
+      window.gtag = function () { window.dataLayer.push(arguments); };
+      window.gtag('js', new Date());
+      window.gtag('config', '{{ google_analytics_id }}', { anonymize_ip: true });
+      const script = document.createElement('script');
+      script.async = true;
+      script.src = 'https://www.googletagmanager.com/gtag/js?id={{ google_analytics_id }}';
+      document.head.appendChild(script);
+    };
+    const banner = document.createElement('aside');
+    banner.className = 'cookie-banner';
+    banner.setAttribute('role', 'dialog');
+    banner.setAttribute('aria-label', 'Analytics consent');
+    banner.innerHTML = '<div><strong>Help us improve DamageSense AI</strong><p>Optional analytics help us understand site performance. You can accept or continue without analytics.</p></div><div class="cookie-actions"><button type="button" data-consent="decline">Continue without analytics</button><button type="button" data-consent="accept">Accept analytics</button></div>';
+    const stored = localStorage.getItem(consentKey);
+    if (stored === 'accepted') loadAnalytics();
+    if (!stored) document.body.appendChild(banner);
+    banner.addEventListener('click', function (event) {
+      const choice = event.target.dataset.consent;
+      if (!choice) return;
+      localStorage.setItem(consentKey, choice === 'accept' ? 'accepted' : 'declined');
+      if (choice === 'accept') loadAnalytics();
+      banner.remove();
+    });
+  }());
+</script>
+{% endif %}

@@ -90,12 +90,43 @@ def inject_user():
     return {'current_user': current_user()}
 
 
+@main.app_context_processor
+def inject_public_config():
+    return {
+        'site_url': os.getenv('PUBLIC_SITE_URL', 'https://damagesense-ai-1.onrender.com').rstrip('/'),
+        'google_analytics_id': os.getenv('GOOGLE_ANALYTICS_ID', '').strip(),
+    }
+
+
 @main.route('/')
 def index():
     if current_user() is not None:
         return redirect(url_for('main.home'))
     site_url = os.getenv('PUBLIC_SITE_URL', 'https://damagesense-ai-1.onrender.com').rstrip('/')
     return render_template('landing.html', site_url=site_url, google_verification=os.getenv('GOOGLE_SITE_VERIFICATION', '').strip())
+
+
+@main.route('/privacy')
+def privacy():
+    return render_template('legal.html', page_title='Privacy Policy | DamageSense AI', page_description='Read how DamageSense AI handles account, assessment, and website information.', legal_title='Privacy Policy', legal_updated='August 26, 2026', legal_sections=[
+        ('Information we collect', 'We collect account information you provide, such as your username and email address, plus images and assessment results you choose to submit. We also receive basic security and operational information needed to protect and operate the service.'),
+        ('How we use information', 'We use information to authenticate users, process assessments, save private assessment history, provide requested notifications, maintain security, and improve reliability. We do not sell personal information.'),
+        ('Images and assessment data', 'Uploaded images and assessment results are associated with your account so you can review them later. Do not upload sensitive personal information or imagery unless your organization has approved that use.'),
+        ('Service providers', 'We may use infrastructure, hosting, email delivery, analytics, and AI model providers to operate requested features. These providers process information only as needed to provide their services.'),
+        ('Your choices', 'You may stop using the service and contact the service owner about account or data requests. Because this is a configurable deployment, your organization should add its official contact details and retention periods before production use.'),
+        ('Important limitation', 'DamageSense AI provides decision support for triage. It is not a substitute for a qualified structural engineer, emergency authority, or safety inspection.'),
+    ])
+
+
+@main.route('/terms')
+def terms():
+    return render_template('legal.html', page_title='Terms of Use | DamageSense AI', page_description='Read the terms that govern use of the DamageSense AI assessment workspace.', legal_title='Terms of Use', legal_updated='August 26, 2026', legal_sections=[
+        ('Acceptable use', 'Use the service lawfully and only with images and data you are authorized to process. Do not attempt to disrupt the service, access another user’s account, or bypass security controls.'),
+        ('Assessment outputs', 'AI classifications, confidence scores, severity labels, and recommendations are estimates intended to support first-pass triage. You remain responsible for professional review and operational decisions.'),
+        ('Account responsibility', 'Keep login credentials confidential and notify the service owner if you suspect unauthorized access. Administrators may manage account status and roles within the deployment.'),
+        ('Availability and changes', 'The service may change as models, infrastructure, and security requirements evolve. No availability or accuracy guarantee is made unless your organization has entered a separate written agreement.'),
+        ('Contact and governing terms', 'Replace this section with your organization’s legal contact, governing law, and support process before relying on this page as a final legal agreement.'),
+    ])
 
 
 @main.route('/register', methods=['GET', 'POST'])
@@ -431,14 +462,14 @@ def health():
 @main.route('/robots.txt')
 def robots_txt():
     site_url = os.getenv('PUBLIC_SITE_URL', 'https://damagesense-ai-1.onrender.com').rstrip('/')
-    body = '\n'.join(['User-agent: *', 'Allow: /', 'Allow: /login', 'Allow: /register', 'Disallow: /home', 'Disallow: /assess', 'Disallow: /history', 'Disallow: /api/', 'Disallow: /admin', 'Disallow: /static/uploads/', f'Sitemap: {site_url}/sitemap.xml', ''])
+    body = '\n'.join(['User-agent: *', 'Allow: /', 'Allow: /login', 'Allow: /register', 'Allow: /privacy', 'Allow: /terms', 'Disallow: /home', 'Disallow: /assess', 'Disallow: /history', 'Disallow: /api/', 'Disallow: /admin', 'Disallow: /static/uploads/', f'Sitemap: {site_url}/sitemap.xml', ''])
     return Response(body, mimetype='text/plain')
 
 
 @main.route('/sitemap.xml')
 def sitemap_xml():
     site_url = os.getenv('PUBLIC_SITE_URL', 'https://damagesense-ai-1.onrender.com').rstrip('/')
-    body = f'''<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url><loc>{site_url}/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>\n  <url><loc>{site_url}/login</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>\n  <url><loc>{site_url}/register</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>\n  <url><loc>{site_url}/forgot-password</loc><changefreq>yearly</changefreq><priority>0.2</priority></url>\n</urlset>\n'''
+    body = f'''<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url><loc>{site_url}/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>\n  <url><loc>{site_url}/login</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>\n  <url><loc>{site_url}/register</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>\n  <url><loc>{site_url}/forgot-password</loc><changefreq>yearly</changefreq><priority>0.2</priority></url>\n  <url><loc>{site_url}/privacy</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>\n  <url><loc>{site_url}/terms</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>\n</urlset>\n'''
     return Response(body, mimetype='application/xml')
 
 

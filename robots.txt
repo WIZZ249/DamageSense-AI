@@ -1,10 +1,14 @@
 User-agent: *
+Allow: /
 Allow: /login
 Allow: /register
+Allow: /privacy
+Allow: /terms
 Disallow: /home
 Disallow: /assess
 Disallow: /history
 Disallow: /api/
+Disallow: /admin
 Disallow: /static/uploads/
 
-Sitemap: https://YOUR-DOMAIN-HERE/sitemap.xml
+Sitemap: https://damagesense-ai-1.onrender.com/sitemap.xml

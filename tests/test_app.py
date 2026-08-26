@@ -63,6 +63,23 @@ def test_google_verification_file_is_served_at_site_root(client):
     assert response.data == b'google-site-verification: google040001972a56c425.html'
 
 
+def test_public_seo_pages_and_crawl_files(client):
+    assert client.get('/privacy').status_code == 200
+    assert client.get('/terms').status_code == 200
+    assert client.get('/robots.txt').status_code == 200
+    assert b'Sitemap: https://damagesense-ai-1.onrender.com/sitemap.xml' in client.get('/robots.txt').data
+    sitemap = client.get('/sitemap.xml')
+    assert sitemap.status_code == 200
+    assert b'https://damagesense-ai-1.onrender.com/' in sitemap.data
+    assert b'/privacy' in sitemap.data and b'/terms' in sitemap.data
+
+
+def test_custom_404_is_branded(client):
+    response = client.get('/this-page-does-not-exist')
+    assert response.status_code == 404
+    assert b'This page moved.' in response.data
+
+
 def test_register_creates_user_home(client):
     """Registration should create a logged-in workspace."""
     r = register(client)

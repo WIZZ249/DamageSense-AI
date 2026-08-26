@@ -1,6 +1,6 @@
 import os
 
-from flask import Flask
+from flask import Flask, render_template, request
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_sqlalchemy import SQLAlchemy
@@ -136,6 +136,18 @@ def create_app(config=None):
 
     from app.routes import main
     app.register_blueprint(main)
+
+    @app.errorhandler(404)
+    def page_not_found(error):
+        return render_template('404.html'), 404
+
+    @app.after_request
+    def add_cache_headers(response):
+        if request.path.startswith('/static/') or request.path.endswith(('.svg', '.ico', '.txt', '.xml')):
+            response.headers.setdefault('Cache-Control', 'public, max-age=3600')
+        response.headers.setdefault('X-Content-Type-Options', 'nosniff')
+        response.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
+        return response
 
     with app.app_context():
         db.create_all()
