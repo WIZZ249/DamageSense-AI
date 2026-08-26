@@ -89,10 +89,17 @@ def test_register_creates_user_home(client):
 
 def test_registered_user_can_login_again_case_insensitively(client):
     register(client, username='Field_User', email='Field@Example.com')
-    client.get('/logout')
+    logout_response = client.get('/logout')
+    assert 'logged_out=1' in logout_response.location
     response = client.post('/login', data={'identity': 'field_user', 'password': 'password123'}, follow_redirects=True)
     assert response.status_code == 200
     assert b"Field_User's Assessment Home" in response.data
+
+
+def test_login_page_is_not_cacheable_after_logout(client):
+    response = client.get('/login?logged_out=1')
+    assert response.headers['Cache-Control'].startswith('no-store')
+    assert response.headers['Pragma'] == 'no-cache'
 
 
 def test_assess_requires_login(client):
@@ -126,6 +133,8 @@ def test_assess_upload_creates_report(client):
     assert data['filename'].endswith('building.png')
     assert data['label']
     assert data['severity'] in {'CRITICAL', 'STABLE', 'UNKNOWN'}
+    assert 'analysis' in data
+    assert 'model' in data
 
 
 def test_history_is_scoped_to_logged_in_user(client):

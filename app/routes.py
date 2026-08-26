@@ -8,7 +8,10 @@ import uuid
 from datetime import datetime, timedelta
 from functools import wraps
 
-from flask import Blueprint, Response, abort, current_app, flash, jsonify, redirect, render_template, request, send_from_directory, session, url_for
+from flask import (
+    Blueprint, Response, abort, current_app, flash, jsonify, make_response, redirect,
+    render_template, request, send_from_directory, session, url_for,
+)
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet
@@ -186,7 +189,11 @@ def login():
         record_audit('login_failed', metadata={'identity_provided': bool(identity)})
         flash('Invalid username, email, or password.', 'error')
 
-    return render_template('login.html')
+    response = make_response(render_template('login.html'))
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
 
 
 @main.route('/forgot-password', methods=['GET', 'POST'])
