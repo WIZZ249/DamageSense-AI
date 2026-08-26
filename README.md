@@ -169,6 +169,20 @@ SENDGRID_FROM_NAME=DamageSense AI
 
 If email is not configured, registration and reset requests still complete safely, while the admin console shows the delivery status as not configured. Password reset responses do not reveal whether an email is registered.
 
+## Professional Visual Analysis
+
+The assessment flow can use a professional multimodal vision model through any OpenAI-compatible Chat Completions endpoint. It accepts images of roads, vehicles, buildings, bridges, utilities, retaining walls, tunnels, and other visible infrastructure, then returns an asset type, classification, confidence, executive summary, observed findings, potential hazards, immediate actions, recommended actions, confidence rationale, urgency, and review priority. Results are returned directly to the workspace immediately after analysis and are also stored with the assessment history.
+
+Configure the model in Render with:
+
+```text
+VISION_API_KEY=your-provider-api-key
+VISION_API_BASE=https://api.openai.com/v1
+VISION_MODEL=gpt-5
+```
+
+The model call is server-side only. Never expose `VISION_API_KEY` to the browser or commit it to GitHub. When these variables are blank or the provider is unavailable, the app falls back to the configured TFLite model, Roboflow model, or clearly labeled heuristic signal. AI output is a conservative first-pass aid, not an engineering certification; safety-critical decisions require qualified human inspection.
+
 ## Camera Capture
 
 The dashboard includes a `Take Picture` mode. Browser camera access requires HTTPS, which Render provides on deployed services. On phones, the upload field also hints to open the device camera.

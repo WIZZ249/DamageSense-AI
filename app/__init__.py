@@ -26,6 +26,7 @@ _ASSESSMENT_COLUMN_ADDITIONS = {
     'urgency': 'VARCHAR(20)',
     'recommendation_summary': 'VARCHAR(255)',
     'recommendation_next_step': 'TEXT',
+    'analysis_json': 'TEXT',
 }
 
 

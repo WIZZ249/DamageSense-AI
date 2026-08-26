@@ -44,15 +44,15 @@
                 {% endif %}
             {% endwith %}
 
-            <form method="post">
+            <form method="post" autocomplete="off">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="mb-3">
                     <label for="identity">Username or email</label>
-                    <input class="form-control" id="identity" name="identity" autocomplete="username" required>
+                    <input class="form-control" id="identity" name="identity" autocomplete="off" data-lpignore="true" data-1p-ignore="true" required>
                 </div>
                 <div class="mb-3">
                     <label for="password">Password</label>
-                    <input class="form-control" id="password" name="password" type="password" autocomplete="current-password" required>
+                    <input class="form-control" id="password" name="password" type="password" autocomplete="new-password" data-lpignore="true" data-1p-ignore="true" required>
                 </div>
                 <div style="text-align:right;margin:-4px 0 14px;font-size:.8rem"><a href="{{ url_for('main.forgot_password') }}">Forgot password?</a></div>
                 <button class="btn btn-primary" type="submit">Login</button>
@@ -60,5 +60,6 @@
             <div class="switch">No account yet? <a href="{{ url_for('main.register') }}">Create one</a></div>
         </section>
     </main>
+    {% if request.args.get('logged_out') %}<script>window.addEventListener('pageshow',function(){document.querySelectorAll('#identity,#password').forEach(function(field){field.value='';});});</script>{% endif %}
 </body>
 </html>

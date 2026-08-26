@@ -232,6 +232,97 @@ def normalize_damage_prediction(label, confidence):
     }
 
 
+def _image_media_type(file_bytes):
+    try:
+        with Image.open(io.BytesIO(file_bytes)) as image:
+            return Image.MIME.get(image.format, 'image/jpeg')
+    except Exception:
+        return 'image/jpeg'
+
+
+def _normalize_professional_result(payload):
+    """Normalize a structured multimodal response into the app's stable contract."""
+    analysis = payload.get('analysis') or {}
+    label = str(payload.get('classification') or 'unknown_damage_state').lower().replace('-', '_').replace(' ', '_')
+    normalized = normalize_damage_prediction(label, float(payload.get('confidence', 0)))
+    normalized['model'] = os.getenv('VISION_MODEL', 'gpt-5')
+    normalized['asset_type'] = str(payload.get('asset_type') or 'unknown')
+    normalized['analysis'] = {
+        'asset_type': normalized['asset_type'],
+        'executive_summary': str(analysis.get('executive_summary') or 'Professional image analysis completed.'),
+        'findings': [str(item) for item in (analysis.get('findings') or [])][:8],
+        'hazards': [str(item) for item in (analysis.get('hazards') or [])][:8],
+        'recommendations': [str(item) for item in (analysis.get('recommendations') or [])][:8],
+        'immediate_actions': [str(item) for item in (analysis.get('immediate_actions') or [])][:8],
+        'confidence_rationale': str(analysis.get('confidence_rationale') or 'Confidence reflects the visible evidence and image quality.'),
+        'review_priority': str(analysis.get('review_priority') or normalized.get('severity', 'UNKNOWN')),
+    }
+    rec = get_repair_recommendation(normalized['label']).copy()
+    if normalized['analysis']['recommendations']:
+        rec['summary'] = normalized['analysis']['recommendations'][0]
+    if normalized['analysis']['immediate_actions']:
+        rec['next_step'] = normalized['analysis']['immediate_actions'][0]
+    normalized['recommendation'] = rec
+    return normalized
+
+
+def classify_with_vision_llm(file_bytes):
+    """Use a configured professional multimodal model for broad asset assessment."""
+    api_key = os.getenv('VISION_API_KEY') or os.getenv('OPENAI_API_KEY')
+    api_base = (os.getenv('VISION_API_BASE') or os.getenv('OPENAI_API_BASE') or '').rstrip('/')
+    model = os.getenv('VISION_MODEL', 'gpt-5')
+    if not api_key or not api_base:
+        return None
+
+    schema = {
+        'type': 'object',
+        'properties': {
+            'asset_type': {'type': 'string'},
+            'classification': {'type': 'string', 'enum': ['no_visible_damage', 'minor_structural_damage', 'major_structural_damage', 'collapsed_structure', 'destroyed_structure', 'unknown_damage_state']},
+            'confidence': {'type': 'number'},
+            'analysis': {'type': 'object', 'properties': {
+                'executive_summary': {'type': 'string'},
+                'findings': {'type': 'array', 'items': {'type': 'string'}},
+                'hazards': {'type': 'array', 'items': {'type': 'string'}},
+                'recommendations': {'type': 'array', 'items': {'type': 'string'}},
+                'immediate_actions': {'type': 'array', 'items': {'type': 'string'}},
+                'confidence_rationale': {'type': 'string'},
+                'review_priority': {'type': 'string'},
+            }, 'required': ['executive_summary', 'findings', 'hazards', 'recommendations', 'immediate_actions', 'confidence_rationale', 'review_priority'], 'additionalProperties': False},
+        },
+        'required': ['asset_type', 'classification', 'confidence', 'analysis'],
+        'additionalProperties': False,
+    }
+    prompt = """You are a professional visual damage-assessment analyst supporting humanitarian response and infrastructure inspection. Analyze the image conservatively. It may show a road, bridge, vehicle, building, utility asset, retaining wall, tunnel, or another structure. Identify the asset type and only describe evidence visible in the image. Do not invent measurements, hidden damage, or engineering certification. Use confidence from 0 to 100. Classification must describe the visible condition using the supplied categories. Give practical safety-first actions, clearly flag uncertainty, and state that qualified professionals must make safety-critical decisions. Return JSON matching the schema exactly."""
+    image_url = f"data:{_image_media_type(file_bytes)};base64,{base64.b64encode(file_bytes).decode('ascii')}"
+    request_body = {
+        'model': model,
+        'messages': [
+            {'role': 'system', 'content': prompt},
+            {'role': 'user', 'content': [{'type': 'text', 'text': 'Assess this image for triage and inspection planning.'}, {'type': 'image_url', 'image_url': {'url': image_url, 'detail': 'auto'}}]},
+        ],
+        'response_format': {'type': 'json_schema', 'json_schema': {'name': 'damage_assessment', 'strict': True, 'schema': schema}},
+        'max_completion_tokens': 1800,
+    }
+    try:
+        request = urllib.request.Request(
+            f'{api_base}/chat/completions',
+            data=json.dumps(request_body).encode('utf-8'),
+            headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
+            method='POST',
+        )
+        with urllib.request.urlopen(request, timeout=45) as response:
+            response_payload = json.loads(response.read().decode('utf-8'))
+        content = response_payload['choices'][0]['message'].get('content') or '{}'
+        if isinstance(content, list):
+            content = ''.join(part.get('text', '') for part in content if isinstance(part, dict))
+        parsed = json.loads(content)
+        return _normalize_professional_result(parsed)
+    except Exception as exc:
+        print(f'Professional vision API error: {exc}')
+        return None
+
+
 def classify_with_roboflow(file_bytes):
     """Call the configured Roboflow hosted damage model."""
     api_key = os.getenv('ROBOFLOW_API_KEY')
@@ -339,14 +430,18 @@ def classify_with_heuristic(file_bytes):
 
 
 def classify_image(file_bytes: bytes) -> dict:
-    """Assess damage with this priority: local TFLite -> Roboflow -> heuristic fallback."""
+    """Assess with professional vision first, then local/hosted classifiers and a labeled fallback."""
+    professional_result = classify_with_vision_llm(file_bytes)
+    if professional_result:
+        return professional_result
+
     tflite_result = classify_with_tflite(file_bytes)
     if tflite_result and tflite_result.get('confidence', 0) >= TFLITE_CONFIDENCE_THRESHOLD * 100:
         result = tflite_result
     else:
-        professional_result = classify_with_roboflow(file_bytes)
-        if professional_result:
-            result = professional_result
+        hosted_result = classify_with_roboflow(file_bytes)
+        if hosted_result:
+            result = hosted_result
         else:
             heuristic_result = classify_with_heuristic(file_bytes)
             result = heuristic_result or {
@@ -354,5 +449,5 @@ def classify_image(file_bytes: bytes) -> dict:
                 'severity': 'UNKNOWN', 'model': 'unavailable'
             }
 
-    result['recommendation'] = get_repair_recommendation(result['label'])
+    result.setdefault('recommendation', get_repair_recommendation(result['label']))
     return result

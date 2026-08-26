@@ -239,7 +239,7 @@ def reset_password(token):
 @main.route('/logout')
 def logout():
     session.clear()
-    return redirect(url_for('main.login'))
+    return redirect(url_for('main.login', logged_out=1))
 
 
 @main.route('/admin')
@@ -417,6 +417,8 @@ def upload():
     confidence = 0.0
     severity = 'UNKNOWN'
     recommendation = {}
+    analysis = {}
+    model_name = 'unavailable'
 
     try:
         with open(filepath, 'rb') as uploaded_file:
@@ -425,6 +427,10 @@ def upload():
         confidence = result['confidence']
         severity = result['severity']
         recommendation = result.get('recommendation', {})
+        analysis = result.get('analysis', {}) or {}
+        analysis['asset_type'] = result.get('asset_type') or analysis.get('asset_type') or 'unknown'
+        analysis['model'] = result.get('model', 'unavailable')
+        model_name = result.get('model', 'unavailable')
     except Exception as exc:
         current_app.logger.exception('AI Error: %s', exc)
 
@@ -437,12 +443,16 @@ def upload():
         urgency=recommendation.get('urgency'),
         recommendation_summary=recommendation.get('summary'),
         recommendation_next_step=recommendation.get('next_step'),
+        analysis_json=json.dumps(analysis, ensure_ascii=False),
     )
     db.session.add(new_report)
     db.session.commit()
-    record_audit('assessment_created', actor=current_user(), target=current_user(), metadata={'assessment_id': new_report.id, 'severity': severity, 'label': label})
+    record_audit('assessment_created', actor=current_user(), target=current_user(), metadata={'assessment_id': new_report.id, 'severity': severity, 'label': label, 'model': model_name})
     if wants_json_response():
-        return jsonify(new_report.to_dict())
+        response_data = new_report.to_dict()
+        response_data['model'] = model_name
+        response_data['analysis'] = analysis
+        return jsonify(response_data)
 
 
     return redirect(url_for('main.home'))

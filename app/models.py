@@ -1,5 +1,5 @@
 from datetime import datetime
-
+import json
 
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -75,11 +75,18 @@ class Assessment(db.Model):
     urgency = db.Column(db.String(20), nullable=True)
     recommendation_summary = db.Column(db.String(255), nullable=True)
     recommendation_next_step = db.Column(db.Text, nullable=True)
+    analysis_json = db.Column(db.Text, nullable=True)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
     user = db.relationship('User', back_populates='assessments')
 
     def to_dict(self):
+        analysis = {}
+        if self.analysis_json:
+            try:
+                analysis = json.loads(self.analysis_json)
+            except (TypeError, ValueError):
+                analysis = {}
         return {
             'id': self.id,
             'filename': self.filename,
@@ -91,5 +98,6 @@ class Assessment(db.Model):
                 'summary': self.recommendation_summary,
                 'next_step': self.recommendation_next_step,
             },
+            'analysis': analysis,
             'timestamp': self.timestamp.strftime('%Y-%m-%d %H:%M:%S')
         }
