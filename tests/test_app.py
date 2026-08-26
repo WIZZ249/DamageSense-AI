@@ -87,6 +87,14 @@ def test_register_creates_user_home(client):
     assert b"field_user's Assessment Home" in r.data
 
 
+def test_registered_user_can_login_again_case_insensitively(client):
+    register(client, username='Field_User', email='Field@Example.com')
+    client.get('/logout')
+    response = client.post('/login', data={'identity': 'field_user', 'password': 'password123'}, follow_redirects=True)
+    assert response.status_code == 200
+    assert b"Field_User's Assessment Home" in response.data
+
+
 def test_assess_requires_login(client):
     """Uploads should require authentication."""
     r = client.post('/assess')

@@ -115,15 +115,37 @@ Recommended datasets and model families:
 
 ## Administrator Access
 
-The app provisions an administrator from environment variables at startup. This keeps credentials out of the repository and works with Render deploys. Add the following variables in the Render service environment settings, then deploy from `main`:
+The app provisions an administrator from Render environment variables at startup. Credentials are never stored in GitHub and there is intentionally no public “make me admin” action. The administrator account is created or promoted when the service starts.
+
+### Exact Render setup
+
+1. Open the [Render service dashboard](https://dashboard.render.com/web/srv-d6q63ehj16oc73d21ilg) and select **Environment**.
+2. Add or update these variables. Use your own values; do not copy this example literally:
 
 ```text
 ADMIN_USERNAME=admin
-ADMIN_EMAIL=admin@example.com
-ADMIN_PASSWORD=use-a-long-unique-password
+ADMIN_EMAIL=your-real-admin-email@example.com
+ADMIN_PASSWORD=use-a-long-unique-password-at-least-8-characters
+ADMIN_RESET_PASSWORD=false
 ```
 
-The account is created if it does not exist, or promoted to administrator if the email or username already exists. The password is not changed on later deploys unless `ADMIN_RESET_PASSWORD=true` is explicitly set. Administrators are redirected to `/admin` after login and can manage other users, while the application prevents an administrator from disabling or demoting their own account and prevents removing the last active administrator.
+3. Click **Save Changes**. Render normally starts a new deploy; if it does not, open **Manual Deploy** and deploy the latest commit from `main`.
+4. Wait for the deploy to finish successfully. Provisioning occurs during application startup, so saving variables without a restart does not create the account.
+5. Open `https://damagesense-ai-1.onrender.com/login` and enter either the exact admin username or email plus the configured password. A successful admin login redirects to `/admin`.
+
+The account is created if it does not exist, or promoted to administrator if the configured email or username already exists. The password is not changed on later restarts unless `ADMIN_RESET_PASSWORD=true` is explicitly set. Use that flag only for an intentional password rotation, redeploy once, then set it back to `false` and redeploy again.
+
+### If the admin login still fails
+
+First confirm that all four variables are spelled exactly as shown and that there are no surrounding quotation marks or trailing spaces. Confirm that `ADMIN_PASSWORD` is at least eight characters. Then check **Render → Logs** for `Provisioned configured admin account` or `Verified configured admin access`. If those messages are absent, the variables were not available to the running service or the deploy did not restart the application.
+
+The application must use a persistent database in Render. If `DATABASE_URL` is missing, the app falls back to SQLite, and accounts can disappear when the service restarts or a new instance is created. In Render, create a PostgreSQL database, copy its **Internal Database URL**, and add it to the web service as:
+
+```text
+DATABASE_URL=postgresql://...internal-render-database-url...
+```
+
+Then redeploy. Do not use an ephemeral local SQLite file for production user accounts. If you intentionally use SQLite, attach a Render persistent disk and configure the database and upload paths on that disk.
 
 After the first successful login, store the credentials in a password manager. Do not commit them to `.env`, source code, or GitHub.
 
@@ -170,7 +192,7 @@ gunicorn run:app --timeout 120 --workers 1
 4. Add the administrator variables from the section above, using a unique password stored in a password manager.
 5. Deploy from `main`.
 
-For serious production use, replace SQLite with PostgreSQL so user accounts and assessment history persist reliably across restarts. If you already have a persistent Render disk attached, keep the SQLite database and upload folder on that disk.
+For production, use a Render PostgreSQL database. This is required for reliable account, assessment, reset-token, and audit-log persistence across deploys and restarts. If you already have a persistent Render disk attached, SQLite can be used only when `DATABASE_URL` and `UPLOAD_FOLDER` point to that mounted disk.
 
 ## License
 

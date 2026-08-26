@@ -14,6 +14,7 @@ from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 from PIL import Image, UnidentifiedImageError
+from sqlalchemy import func
 from werkzeug.utils import secure_filename
 
 from . import limiter
@@ -147,7 +148,7 @@ def register():
             flash(f'Password must be at least {MIN_PASSWORD_LENGTH} characters.', 'error')
         elif password != confirm_password:
             flash('Passwords do not match.', 'error')
-        elif User.query.filter((User.username == username) | (User.email == email)).first():
+        elif User.query.filter((func.lower(User.username) == username.lower()) | (func.lower(User.email) == email)).first():
             flash('An account with that username or email already exists.', 'error')
         else:
             user = User(username=username, email=email)
@@ -173,7 +174,8 @@ def login():
     if request.method == 'POST':
         identity = request.form.get('identity', '').strip()
         password = request.form.get('password', '')
-        user = User.query.filter((User.username == identity) | (User.email == identity.lower())).first()
+        normalized_identity = identity.lower()
+        user = User.query.filter((func.lower(User.username) == normalized_identity) | (func.lower(User.email) == normalized_identity)).first()
 
         if user and user.is_active and user.check_password(password):
             record_audit('login_success', actor=user)
