@@ -593,9 +593,9 @@
         button.classList.toggle('loading', isLoading);
         document.getElementById('assessButtonText').textContent = isLoading ? 'Analyzing image' : 'Run assessment';
         loadingBox.classList.toggle('visible', isLoading);
-        document.getElementById('resultCard').classList.remove('visible');
         if (loadingTimer) clearInterval(loadingTimer);
         if (!isLoading) { document.getElementById('progressFill').style.width = '100%'; document.getElementById('loadingPercent').textContent = 'Complete'; return; }
+        document.getElementById('resultCard').classList.remove('visible');
         const messages = ['Preparing your image…', 'Checking visual detail…', 'Running damage classification…', 'Building recommended next step…'];
         let progress = 15; let messageIndex = 0;
         document.getElementById('progressFill').style.width = progress + '%';
