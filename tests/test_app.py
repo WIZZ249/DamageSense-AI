@@ -64,6 +64,13 @@ def test_google_verification_file_is_served_at_site_root(client):
     assert response.data == b'google-site-verification: google040001972a56c425.html'
 
 
+def test_shared_theme_assets_are_served(client):
+    response = client.get('/static/theme.css')
+    assert response.status_code == 200
+    assert b'--theme-forest' in response.data
+    assert b'--theme-blue' in response.data
+
+
 def test_public_seo_pages_and_crawl_files(client):
     assert client.get('/privacy').status_code == 200
     assert client.get('/terms').status_code == 200
