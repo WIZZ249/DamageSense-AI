@@ -83,3 +83,116 @@ button:hover, .btn:hover, .primary-button:hover, .secondary-button:hover, .links
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; }
 }
+
+/* Field-operations motion layer: alive, but still legible under pressure. */
+@keyframes ds-breathe {
+    0%, 100% { opacity: .52; transform: scale(1); }
+    50% { opacity: .9; transform: scale(1.04); }
+}
+@keyframes ds-scan {
+    0% { transform: translateY(-110%); opacity: 0; }
+    18% { opacity: .85; }
+    82% { opacity: .35; }
+    100% { transform: translateY(110%); opacity: 0; }
+}
+@keyframes ds-pulse-ring {
+    0% { box-shadow: 0 0 0 0 rgba(168,216,255,.24); }
+    70% { box-shadow: 0 0 0 13px rgba(168,216,255,0); }
+    100% { box-shadow: 0 0 0 0 rgba(168,216,255,0); }
+}
+@keyframes ds-rise {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+@keyframes ds-shimmer {
+    from { background-position: 180% 0; }
+    to { background-position: -80% 0; }
+}
+
+.hero, .workspace, .content { position: relative; }
+.hero::before {
+    content: "";
+    position: absolute;
+    top: 12%;
+    right: 6%;
+    width: 170px;
+    height: 170px;
+    border: 1px solid rgba(168,216,255,.2);
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(168,216,255,.13), transparent 62%);
+    animation: ds-breathe 6s ease-in-out infinite;
+    pointer-events: none;
+}
+.hero::after {
+    content: "FIELD / LIVE / VISUAL TRIAGE";
+    position: absolute;
+    right: 8%;
+    bottom: 15%;
+    color: rgba(168,216,255,.32);
+    font: 700 .62rem/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+    letter-spacing: .18em;
+    transform: rotate(-90deg);
+    transform-origin: right bottom;
+    pointer-events: none;
+}
+.snapshot-card, .assessment-card, .quality-card, .result-card, .history-table-wrap, .admin-card, .metric-card {
+    position: relative;
+    overflow: hidden;
+    animation: ds-rise .6s cubic-bezier(.2,.8,.2,1) both;
+}
+.snapshot-card:nth-child(2) { animation-delay: .08s; }
+.snapshot-card:nth-child(3) { animation-delay: .16s; }
+.snapshot-card::after, .assessment-card::after, .result-card::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(110deg, transparent 30%, rgba(168,216,255,.08) 48%, transparent 66%);
+    background-size: 220% 100%;
+    animation: ds-shimmer 8s ease-in-out infinite;
+    pointer-events: none;
+}
+.snapshot-card:hover { transform: translateY(-5px) rotate(-.5deg); border-color: rgba(168,216,255,.48) !important; }
+.snapshot-card.critical { border-color: rgba(169,67,77,.42) !important; }
+.snapshot-card.critical .snapshot-number { color: #e8898f !important; }
+.snapshot-card.stable { border-color: rgba(91,170,125,.42) !important; }
+.snapshot-card.stable .snapshot-number { color: #8ed6aa !important; }
+.live-state, .status-dot, .system-status { animation: ds-pulse-ring 2.4s ease-out infinite; }
+.upload-zone { position: relative; overflow: hidden; }
+.upload-zone::after {
+    content: "";
+    position: absolute;
+    left: 8%;
+    right: 8%;
+    top: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--theme-blue), transparent);
+    opacity: 0;
+    pointer-events: none;
+}
+.upload-zone:hover::after, .upload-zone.dragover::after { opacity: 1; animation: ds-scan 1.8s ease-in-out infinite; }
+.result-card.visible { animation: ds-rise .42s cubic-bezier(.2,.8,.2,1) both; }
+.result-card.visible .confidence-ring { animation: ds-pulse-ring 2.4s .35s ease-out 2; }
+.severity-badge.critical, .severity-badge.high, .hazard-box { box-shadow: inset 3px 0 0 var(--theme-red-bright); }
+.severity-badge.stable { box-shadow: inset 3px 0 0 #5baa7d; }
+.severity-badge.unknown { box-shadow: inset 3px 0 0 var(--theme-blue); }
+.tab.active { color: var(--theme-blue) !important; text-shadow: 0 0 18px rgba(168,216,255,.25); }
+.primary-button, .btn-primary { position: relative; overflow: hidden; }
+.primary-button::before, .btn-primary::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(110deg, transparent 25%, rgba(255,255,255,.42) 48%, transparent 68%);
+    background-size: 220% 100%;
+    animation: ds-shimmer 5s ease-in-out infinite;
+    pointer-events: none;
+}
+.toast.visible { border-left: 3px solid var(--theme-blue) !important; }
+
+@media (max-width: 650px) {
+    .hero::before { width: 100px; height: 100px; top: 5%; right: 2%; }
+    .hero::after { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .hero::before, .snapshot-card, .assessment-card, .quality-card, .result-card, .history-table-wrap, .admin-card, .metric-card, .snapshot-card::after, .assessment-card::after, .result-card::after, .live-state, .status-dot, .system-status, .primary-button::before, .btn-primary::before { animation: none !important; }
+}
