@@ -198,7 +198,17 @@ The dashboard includes a `Take Picture` mode. Browser camera access requires HTT
 pytest tests/
 ```
 
-## Deployment on Render
+## Deployment
+
+### Render start command
+
+This repository exposes the Flask application through `run.py`, where the WSGI object is named `app`. The correct Render start command is:
+
+```text
+gunicorn run:app --timeout 120 --workers 1
+```
+
+Do not use `gunicorn app:app`; the `app` package contains the application factory `create_app`, not a module-level WSGI object named `app`. If Render logs show `AttributeError: module 'app' has no attribute 'app'`, open **Settings → Build & Deploy → Start Command**, replace the command with the one above, save, and redeploy the latest commit. A `render.yaml` Blueprint with the correct command is included in the repository.
 
 1. Connect this repository to Render.
 2. Use start command:
