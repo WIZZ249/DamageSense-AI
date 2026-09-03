@@ -31,6 +31,11 @@ _ASSESSMENT_COLUMN_ADDITIONS = {
     'recommendation_summary': 'VARCHAR(255)',
     'recommendation_next_step': 'TEXT',
     'analysis_json': 'TEXT',
+    'latitude': 'DOUBLE PRECISION',
+    'longitude': 'DOUBLE PRECISION',
+    'location_city': 'VARCHAR(120)',
+    'location_country': 'VARCHAR(120)',
+    'location_source': 'VARCHAR(20)',
 }
 
 

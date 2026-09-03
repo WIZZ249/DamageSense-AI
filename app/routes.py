@@ -404,6 +404,74 @@ def _verify_is_image(filepath):
         return False
 
 
+DEMO_LOCATIONS = [
+    (37.1667, 37.0667, 'Gaziantep', 'Türkiye'),
+    (18.5944, -72.3074, 'Port-au-Prince', 'Haiti'),
+    (32.7573, 22.4526, 'Derna', 'Libya'),
+    (33.8938, 35.5018, 'Beirut', 'Lebanon'),
+]
+
+
+def _request_location():
+    raw = request.form.get('location', '').strip()
+    if not raw:
+        return {}
+    try:
+        location = json.loads(raw)
+    except (TypeError, ValueError):
+        return {}
+    try:
+        latitude = float(location.get('latitude'))
+        longitude = float(location.get('longitude'))
+    except (TypeError, ValueError):
+        return {}
+    if not (-90 <= latitude <= 90 and -180 <= longitude <= 180):
+        return {}
+    return {
+        'latitude': latitude,
+        'longitude': longitude,
+        'city': str(location.get('city') or '')[:120] or None,
+        'country': str(location.get('country') or '')[:120] or None,
+        'source': 'gps',
+    }
+
+
+@main.route('/map')
+@login_required
+def damage_map():
+    return render_template('map.html', is_admin=current_user().role == 'admin')
+
+
+@main.route('/api/map-data')
+@login_required
+def map_data():
+    user = current_user()
+    records = Assessment.query.order_by(Assessment.timestamp.desc(), Assessment.id.desc()).all() if user.role == 'admin' else Assessment.query.filter_by(user_id=user.id).order_by(Assessment.timestamp.desc(), Assessment.id.desc()).all()
+    points = []
+    for index, record in enumerate(records):
+        location = record.to_dict().get('location')
+        estimated = False
+        if not location:
+            latitude, longitude, city, country = DEMO_LOCATIONS[index % len(DEMO_LOCATIONS)]
+            location = {'latitude': latitude, 'longitude': longitude, 'city': city, 'country': country, 'source': 'estimated'}
+            estimated = True
+        item = record.to_dict()
+        item['location'] = location
+        item['location']['estimated'] = estimated
+        if user.role == 'admin' and record.user:
+            item['user'] = record.user.username
+        points.append(item)
+    summary = {
+        'total': len(points),
+        'critical': sum(1 for point in points if point['severity'] == 'CRITICAL'),
+        'high': sum(1 for point in points if point['severity'] == 'HIGH'),
+        'medium': sum(1 for point in points if point['severity'] == 'MEDIUM'),
+        'low': sum(1 for point in points if point['severity'] == 'LOW'),
+        'zones': len({(point['location']['city'], point['location']['country']) for point in points}),
+    }
+    return jsonify({'points': points, 'summary': summary, 'scope': 'global' if user.role == 'admin' else 'personal'})
+
+
 @main.route('/upload', methods=['GET', 'POST'])
 @main.route('/assess', methods=['POST'])
 @login_required
@@ -469,6 +537,7 @@ def upload():
     except Exception as exc:
         current_app.logger.exception('AI Error: %s', exc)
 
+    location = _request_location()
     new_report = Assessment(
         user_id=current_user().id,
         filename=filename,
@@ -479,6 +548,11 @@ def upload():
         recommendation_summary=recommendation.get('summary'),
         recommendation_next_step=recommendation.get('next_step'),
         analysis_json=json.dumps(analysis, ensure_ascii=False),
+        latitude=location.get('latitude'),
+        longitude=location.get('longitude'),
+        location_city=location.get('city'),
+        location_country=location.get('country'),
+        location_source=location.get('source'),
     )
     db.session.add(new_report)
     db.session.commit()

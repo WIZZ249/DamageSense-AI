@@ -83,3 +83,30 @@ button:hover, .btn:hover, .primary-button:hover, .secondary-button:hover, .links
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; }
 }
+
+/* Watermelon UI system: zinc canvas, soft bento surfaces, and explicit field status semantics. */
+:root {
+    --wm-zinc-950: #09090b;
+    --wm-zinc-900: #18181b;
+    --wm-zinc-800: #27272a;
+    --wm-zinc-700: #3f3f46;
+    --wm-zinc-400: #a1a1aa;
+    --wm-zinc-100: #f4f4f5;
+    --wm-coral-crimson: #f43f5e;
+    --wm-coral-soft: rgba(244, 63, 94, .16);
+    --wm-emerald: #34d399;
+    --wm-emerald-soft: rgba(52, 211, 153, .14);
+    --wm-sky: #7dd3fc;
+    --wm-amber: #fbbf24;
+    --wm-radius: 22px;
+    --wm-bento-shadow: 0 18px 60px rgba(0, 0, 0, .26);
+}
+body { background: radial-gradient(circle at 10% -12%, rgba(244,63,94,.11), transparent 30rem), radial-gradient(circle at 88% 0%, rgba(52,211,153,.09), transparent 28rem), var(--wm-zinc-950) !important; }
+.auth-card, .card, .section, .notice, .cookie-banner, .admin-card, .metric-card, .audit-card { border-radius: var(--wm-radius) !important; }
+.severity-badge.critical, .severity-badge.high, .danger, .hazard-box { color: #ffe4e6 !important; background: var(--wm-coral-soft) !important; border-color: rgba(244,63,94,.52) !important; }
+.severity-badge.stable, .success { color: #d1fae5 !important; background: var(--wm-emerald-soft) !important; border-color: rgba(52,211,153,.46) !important; }
+.wm-coral { color: var(--wm-coral-crimson) !important; }
+.wm-emerald { color: var(--wm-emerald) !important; }
+.wm-bento { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 16px; }
+.wm-bento > * { min-width: 0; border: 1px solid rgba(161,161,170,.18); border-radius: var(--wm-radius); box-shadow: var(--wm-bento-shadow); }
+@media (max-width: 700px) { .wm-bento { grid-template-columns: 1fr; } }

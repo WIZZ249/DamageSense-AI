@@ -79,6 +79,11 @@ class Assessment(db.Model):
     recommendation_summary = db.Column(db.String(255), nullable=True)
     recommendation_next_step = db.Column(db.Text, nullable=True)
     analysis_json = db.Column(db.Text, nullable=True)
+    latitude = db.Column(db.Float, nullable=True)
+    longitude = db.Column(db.Float, nullable=True)
+    location_city = db.Column(db.String(120), nullable=True)
+    location_country = db.Column(db.String(120), nullable=True)
+    location_source = db.Column(db.String(20), nullable=True)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
     user = db.relationship('User', back_populates='assessments')
@@ -102,5 +107,12 @@ class Assessment(db.Model):
                 'next_step': self.recommendation_next_step,
             },
             'analysis': analysis,
+            'location': {
+                'latitude': self.latitude,
+                'longitude': self.longitude,
+                'city': self.location_city,
+                'country': self.location_country,
+                'source': self.location_source,
+            } if self.latitude is not None and self.longitude is not None else None,
             'timestamp': self.timestamp.strftime('%Y-%m-%d %H:%M:%S')
         }

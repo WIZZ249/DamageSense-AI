@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Global Damage Map | DamageSense AI</title>
+    <meta name="description" content="Explore geolocated DamageSense AI assessment activity and severity hotspots.">
+    <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='theme.css', v='motion-1') }}">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" crossorigin="">
+    <style>
+        :root { --wm-coral:#ff4757; --wm-amber:#ffa502; --wm-yellow:#eccc68; --wm-emerald:#2ed573; --wm-ink:#f8fafc; --wm-muted:#9aa9b8; }
+        body { min-height:100vh; font-family: Inter, ui-sans-serif, system-ui, sans-serif; background:#0b1220; color:var(--wm-ink); }
+        .map-shell { width:min(1220px, calc(100% - 32px)); margin:0 auto; padding:30px 0 42px; }
+        .map-top { display:flex; align-items:flex-start; justify-content:space-between; gap:20px; margin-bottom:24px; }
+        .map-kicker { color:var(--theme-blue); font:700 .72rem/1 ui-monospace,monospace; letter-spacing:.16em; text-transform:uppercase; }
+        h1 { margin:9px 0 7px; font-size:clamp(2rem,5vw,3.9rem); letter-spacing:-.06em; }
+        .map-lede { color:var(--wm-muted); max-width:620px; line-height:1.6; margin:0; }
+        .map-nav { display:flex; gap:10px; flex-wrap:wrap; }
+        .map-nav a { border:1px solid rgba(168,216,255,.23); border-radius:999px; padding:10px 14px; text-decoration:none; color:var(--wm-ink) !important; background:rgba(17,31,52,.74); }
+        .map-nav a.primary { background:var(--theme-blue); color:#081827 !important; }
+        .map-grid { display:grid; grid-template-columns:minmax(0,1fr) 300px; gap:16px; }
+        .map-card { border:1px solid rgba(168,216,255,.2); border-radius:24px; background:linear-gradient(145deg,rgba(17,34,53,.9),rgba(10,18,32,.95)); box-shadow:0 20px 70px rgba(0,0,0,.28); overflow:hidden; }
+        #damageMap { min-height:620px; height:clamp(500px,68vh,760px); background:#152238; }
+        .leaflet-container { font:13px Inter,ui-sans-serif,sans-serif; background:#152238; }
+        .leaflet-control-zoom a { background:#101d31 !important; color:#eaf4ff !important; border-color:#31445d !important; }
+        .filters { padding:16px; }
+        .filter-title { color:var(--wm-muted); font-size:.73rem; letter-spacing:.12em; text-transform:uppercase; font-weight:700; }
+        .filter-grid { display:grid; gap:9px; margin:12px 0 18px; }
+        .filter-btn { text-align:left; cursor:pointer; color:var(--wm-ink); background:#101d31; border:1px solid #273b54; border-radius:12px; padding:11px 12px; }
+        .filter-btn.active { border-color:var(--theme-blue); box-shadow:0 0 0 2px rgba(168,216,255,.12); }
+        .filter-dot { width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:8px; }
+        .stats { display:grid; grid-template-columns:1fr 1fr; gap:9px; margin-bottom:18px; }
+        .stat { padding:13px; border:1px solid #273b54; border-radius:15px; background:rgba(7,18,33,.68); }
+        .stat strong { display:block; font-size:1.5rem; letter-spacing:-.04em; }
+        .stat span { color:var(--wm-muted); font-size:.72rem; }
+        .locate-btn { width:100%; border:1px solid rgba(168,216,255,.36); border-radius:13px; padding:12px; background:rgba(168,216,255,.1); color:var(--theme-blue); cursor:pointer; font-weight:700; }
+        .map-legend { padding:15px 16px; border-top:1px solid #273b54; color:var(--wm-muted); font-size:.78rem; line-height:1.55; }
+        .marker-pin { width:28px; height:28px; border-radius:50% 50% 50% 0; transform:rotate(-45deg); display:grid; place-items:center; border:2px solid rgba(255,255,255,.72); box-shadow:0 5px 16px rgba(0,0,0,.35); }
+        .marker-pin span { transform:rotate(45deg); color:#fff; font-size:10px; font-weight:900; }
+        .pin-critical { background:var(--wm-coral); } .pin-high { background:var(--wm-amber); } .pin-medium { background:var(--wm-yellow); } .pin-low { background:var(--wm-emerald); } .pin-unknown { background:#64748b; }
+        .leaflet-popup-content-wrapper, .leaflet-popup-tip { background:#0d1a2c; color:#f8fafc; border:1px solid #31445d; }
+        .popup-title { font-weight:800; margin-bottom:5px; } .popup-meta { color:#b7c6d5; font-size:.8rem; line-height:1.5; } .popup-link { display:inline-block; margin-top:8px; color:var(--theme-blue); }
+        @media(max-width:820px){ .map-top{display:block}.map-nav{margin-top:18px}.map-grid{grid-template-columns:1fr} #damageMap{min-height:470px;height:62vh}.filters{display:grid;grid-template-columns:1fr 1fr;gap:14px}.filter-grid{margin:9px 0 0}.stats{margin:0}.locate-btn{grid-column:1/-1} }
+        @media(max-width:520px){ .map-shell{width:min(100% - 22px,1220px);padding-top:20px}.filters{display:block}.stats{margin:14px 0}.map-nav a{padding:9px 11px;font-size:.82rem} }
+    </style>
+</head>
+<body>
+    <main class="map-shell">
+        <header class="map-top">
+            <div><div class="map-kicker">Global operations / live scan intelligence</div><h1>Damage, on the map.</h1><p class="map-lede">A geographic view of assessment activity, severity signals, and emerging damage clusters. Locations without device coordinates are marked as estimated demo zones.</p></div>
+            <nav class="map-nav" aria-label="Map navigation"><a href="{{ url_for('main.home') }}">Workspace</a>{% if is_admin %}<a class="primary" href="{{ url_for('main.admin') }}">Admin console</a>{% endif %}</nav>
+        </header>
+        <section class="map-grid">
+            <div class="map-card"><div id="damageMap" aria-label="Interactive global damage cluster map"></div></div>
+            <aside class="map-card filters" aria-label="Map filters">
+                <div class="filter-title">Active scan scope</div>
+                <div class="stats"><div class="stat"><strong id="totalStat">0</strong><span>Total scans</span></div><div class="stat"><strong id="zoneStat">0</strong><span>Zones</span></div><div class="stat"><strong id="criticalStat">0</strong><span>Critical</span></div><div class="stat"><strong id="highStat">0</strong><span>High</span></div></div>
+                <div class="filter-title">Severity filter</div>
+                <div class="filter-grid" id="severityFilters"><button class="filter-btn active" data-severity="ALL">All signals</button><button class="filter-btn" data-severity="CRITICAL"><i class="filter-dot" style="background:var(--wm-coral)"></i>Critical</button><button class="filter-btn" data-severity="HIGH"><i class="filter-dot" style="background:var(--wm-amber)"></i>High</button><button class="filter-btn" data-severity="MEDIUM"><i class="filter-dot" style="background:var(--wm-yellow)"></i>Medium</button><button class="filter-btn" data-severity="LOW"><i class="filter-dot" style="background:var(--wm-emerald)"></i>Low / safe</button></div>
+                <button class="locate-btn" id="locateBtn" type="button">⊙ Locate my mission</button>
+                <div class="map-legend">Cluster colors inherit the highest-severity scan inside each group. Open a pin for the assessment summary and coordinate source.</div>
+            </aside>
+        </section>
+    </main>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" crossorigin=""></script>
+    <script>
+        const map = L.map('damageMap', { worldCopyJump: true, minZoom: 2 }).setView([22, 18], 2);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors', maxZoom: 19 }).addTo(map);
+        const clusters = L.markerClusterGroup({ showCoverageOnHover:false, maxClusterRadius:48 }); map.addLayer(clusters);
+        let points = []; let severity = 'ALL';
+        const colors = { CRITICAL:'#ff4757', HIGH:'#ffa502', MEDIUM:'#eccc68', LOW:'#2ed573', UNKNOWN:'#64748b' };
+        function iconFor(level){ const safe = colors[level] ? level.toLowerCase() : 'unknown'; return L.divIcon({ className:'', html:`<div class="marker-pin pin-${safe}"><span>!</span></div>`, iconSize:[28,28], iconAnchor:[14,28], popupAnchor:[0,-25] }); }
+        function esc(value){ return String(value ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
+        function render(){ clusters.clearLayers(); const filtered = severity === 'ALL' ? points : points.filter(p => p.severity === severity); filtered.forEach(p => { const loc=p.location||{}; const marker=L.marker([loc.latitude,loc.longitude],{icon:iconFor(p.severity)}); const place=[loc.city,loc.country].filter(Boolean).join(', ') || 'Location unavailable'; marker.bindPopup(`<div class="popup-title">${esc(p.label||'Assessment')}</div><div class="popup-meta"><strong>${esc(p.severity)}</strong> · ${esc(Number(p.confidence||0).toFixed(1))}% confidence<br>${esc(place)}${loc.estimated?' · estimated demo zone':''}<br>${esc(p.filename||'Assessment image')}</div><a class="popup-link" href="{{ url_for('main.home') }}">View full assessment in workspace →</a>`); clusters.addLayer(marker); }); }
+        function updateSummary(summary){ document.getElementById('totalStat').textContent=summary.total||0; document.getElementById('zoneStat').textContent=summary.zones||0; document.getElementById('criticalStat').textContent=summary.critical||0; document.getElementById('highStat').textContent=summary.high||0; }
+        fetch('{{ url_for('main.map_data') }}').then(r=>r.json()).then(data=>{ points=data.points||[]; updateSummary(data.summary||{}); render(); }).catch(()=>{ document.getElementById('totalStat').textContent='—'; });
+        document.querySelectorAll('[data-severity]').forEach(btn=>btn.addEventListener('click',()=>{ document.querySelectorAll('[data-severity]').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); severity=btn.dataset.severity; render(); }));
+        document.getElementById('locateBtn').addEventListener('click',()=>{ if(!navigator.geolocation){ alert('Location is not available in this browser.'); return; } navigator.geolocation.getCurrentPosition(pos=>{ map.flyTo([pos.coords.latitude,pos.coords.longitude],10,{duration:1.2}); L.circleMarker([pos.coords.latitude,pos.coords.longitude],{radius:8,color:'#a8d8ff',fillColor:'#a8d8ff',fillOpacity:.8}).addTo(map).bindPopup('Your current mission position').openPopup(); },()=>alert('Location permission was not granted.')); });
+    </script>
+</body>
+</html>

@@ -280,6 +280,7 @@
             <div class="topbar-meta">
                 <span class="workspace-pill">Inspection workspace</span>
                 <span class="live-state"><span class="live-dot" aria-hidden="true"></span> Systems ready</span>
+                <a class="logout-link" href="{{ url_for('main.damage_map') }}">Global map</a>
                 {% if current_user.is_admin %}<a class="logout-link" href="{{ url_for('main.admin') }}">Admin console</a>{% endif %}
                 <span class="user-chip"><span class="user-avatar" aria-hidden="true">{{ current_user.username[0]|upper }}</span>{{ current_user.username }}</span>
                 <a class="logout-link" href="{{ url_for('main.logout') }}">Log out</a>
@@ -572,6 +573,8 @@
             selectedFilename = file.name;
             formData.append('image', file);
         }
+        const locationPayload = await getAssessmentLocation();
+        if (locationPayload) formData.append('location', JSON.stringify(locationPayload));
         setLoadingState(true);
         try {
             const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
@@ -585,6 +588,15 @@
         } catch (error) { showToast('Connection error. Please try again.'); }
         finally { setLoadingState(false); }
     });
+
+    async function getAssessmentLocation() {
+        if (!navigator.geolocation) return null;
+        return new Promise(resolve => navigator.geolocation.getCurrentPosition(
+            position => resolve({ latitude: position.coords.latitude, longitude: position.coords.longitude, city: '', country: '' }),
+            () => resolve(null),
+            { enableHighAccuracy: false, timeout: 2500, maximumAge: 300000 }
+        ));
+    }
 
     function setLoadingState(isLoading) {
         const button = document.getElementById('assessBtn');
