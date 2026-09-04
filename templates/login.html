@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml">
-    <link rel="stylesheet" href="{{ url_for('static', filename='theme.css', v='motion-1') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='theme.css', v='glass-2') }}">
     <title>Login | DamageSense AI</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -15,18 +15,18 @@
         .auth-shell { width: min(100%, 420px); }
         .brand { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 24px; font-weight: 700; font-size: 1.2rem; }
         .dot { width: 9px; height: 9px; border-radius: 999px; background: var(--green); }
-        .auth-card { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 30px; box-shadow: 0 24px 80px rgba(0,0,0,0.28); }
-        h1 { font-size: 1.45rem; margin-bottom: 8px; font-weight: 700; letter-spacing: 0; }
+        .auth-card { background: rgba(16,37,28,.76); border: 1px solid rgba(168,216,255,.18); border-radius: 18px; padding: 30px; box-shadow: 0 24px 80px rgba(0,0,0,.32); backdrop-filter: blur(18px) saturate(130%); }
+        h1 { font-size: 1.45rem; margin-bottom: 8px; font-weight: 700; }
         .lead { color: var(--muted); margin-bottom: 24px; font-size: 0.92rem; }
         label { font-size: 0.82rem; color: var(--muted); font-weight: 600; margin-bottom: 7px; }
-        .form-control { background: #081b14; border: 1px solid var(--border); color: var(--text); border-radius: 7px; padding: 12px 13px; }
-        .form-control:focus { background: #081b14; color: var(--text); border-color: var(--accent); box-shadow: 0 0 0 3px rgba(168,216,255,0.18); }
-        .btn-primary { width: 100%; background: var(--accent); border: 0; border-radius: 7px; padding: 12px; font-weight: 700; margin-top: 8px; }
-        .alert { border-radius: 7px; padding: 10px 12px; font-size: 0.86rem; }
+        .form-control { background: rgba(8,27,20,.82); border: 1px solid var(--border); color: var(--text); border-radius: 10px; padding: 12px 13px; }
+        .form-control:focus { background: rgba(8,27,20,.92); color: var(--text); border-color: var(--accent); box-shadow: 0 0 0 3px rgba(168,216,255,0.18); }
+        .btn-primary { width: 100%; background: var(--accent); color: #071914; border: 0; border-radius: 10px; padding: 12px; font-weight: 800; margin-top: 8px; }
+        .alert { border-radius: 10px; padding: 10px 12px; font-size: 0.86rem; }
         .alert-error { background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.28); color: #fecaca; }
         .alert-success { background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.28); color: #bbf7d0; }
         .switch { margin-top: 18px; text-align: center; color: var(--muted); font-size: 0.9rem; }
-        a { color: #a8d8ff; text-decoration: none; font-weight: 600; }
+        a { color: var(--accent); text-decoration: none; font-weight: 600; }
         a:hover { color: var(--text); }
     </style>
 </head>
@@ -58,6 +58,9 @@
                 <div style="text-align:right;margin:-4px 0 14px;font-size:.8rem"><a href="{{ url_for('main.forgot_password') }}">Forgot password?</a></div>
                 <button class="btn btn-primary" type="submit">Login</button>
             </form>
+            {% if config.get('REQUIRE_EMAIL_VERIFICATION', True) %}
+            <div style="text-align:center;margin-top:14px;font-size:.82rem;color:var(--muted)"><a href="{{ url_for('verification.resend_verification') }}">Need a new verification email?</a></div>
+            {% endif %}
             <div class="switch">No account yet? <a href="{{ url_for('main.register') }}">Create one</a></div>
         </section>
     </main>
