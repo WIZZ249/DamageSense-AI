@@ -11,6 +11,7 @@ reportlab==4.2.5
 gunicorn==21.2.0
 pytest==8.0.0
 Jinja2==3.1.6
+psycopg2-binary==2.9.10
 
 # Local TFLite inference (app/ai_engine.py) is fully optional and guarded by
 # try/except at import time. `tflite-runtime` is no longer published on PyPI
