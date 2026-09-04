@@ -160,7 +160,9 @@ def create_app(config=None):
     limiter.init_app(app)
 
     from app.routes import main
+    from app.verification import verification
     app.register_blueprint(main)
+    app.register_blueprint(verification)
 
     @app.errorhandler(404)
     def page_not_found(error):
