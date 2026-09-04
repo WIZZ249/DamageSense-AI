@@ -143,15 +143,16 @@ def create_app(config=None):
     if config:
         app.config.update(config)
 
-    # Render's web-service filesystem is ephemeral. A local SQLite database can
-    # therefore appear to work while silently losing every account and
-    # assessment after a restart, spin-down, or deploy. Production must use a
-    # real external database (Render Postgres, Supabase Postgres, etc.).
+    # Render's web-service filesystem is ephemeral. Production persistence is
+    # provided by Render Postgres through DATABASE_URL. If a service has not
+    # yet been wired to the Blueprint database, keep the app bootable instead
+    # of taking the entire deployment down; log a prominent warning so the
+    # missing persistent datastore is immediately visible in Render logs.
     if not app.config.get('TESTING') and (os.getenv('RENDER') or os.getenv('FLASK_ENV') == 'production'):
         if not configured_database_url:
-            raise RuntimeError(
-                'DATABASE_URL must be configured in production. '
-                'Render web-service storage is ephemeral; use PostgreSQL for persistent users and assessments.'
+            app.logger.warning(
+                'DATABASE_URL is not configured. The service is using ephemeral SQLite; '
+                'wire the Render Postgres database from render.yaml before relying on account or assessment persistence.'
             )
 
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
