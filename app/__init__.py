@@ -155,7 +155,14 @@ def create_app(config=None):
 
     @app.after_request
     def add_cache_headers(response):
-        if request.path.startswith('/static/') or request.path.endswith(('.svg', '.ico', '.txt', '.xml')):
+        # CSS/JS must revalidate so production UI changes become visible immediately.
+        # Templates use a version query parameter as an additional cache-busting layer.
+        if request.path.startswith('/static/'):
+            if request.path.endswith(('.css', '.js')):
+                response.headers['Cache-Control'] = 'no-cache, must-revalidate'
+            else:
+                response.headers.setdefault('Cache-Control', 'public, max-age=3600')
+        elif request.path.endswith(('.svg', '.ico', '.txt', '.xml')):
             response.headers.setdefault('Cache-Control', 'public, max-age=3600')
         response.headers.setdefault('X-Content-Type-Options', 'nosniff')
         response.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
