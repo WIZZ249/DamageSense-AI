@@ -15,19 +15,19 @@
             --ink: #f4f7fb;
             --muted: #8f9bad;
             --muted-strong: #b8c1ce;
-            --canvas: #071914;
-            --canvas-deep: #04110b;
-            --surface: rgba(16, 37, 28, 0.86);
-            --surface-solid: #10251c;
-            --surface-soft: #163528;
-            --line: rgba(176, 216, 208, 0.17);
-            --line-strong: rgba(176, 216, 208, 0.3);
-            --cyan: #a8d8ff;
-            --cyan-soft: rgba(168, 216, 255, 0.14);
-            --violet: #1e5a40;
-            --amber: #d6b772;
-            --red: #8f3038;
-            --green: #4b9a73;
+            --canvas: #09090b;
+            --canvas-deep: #050506;
+            --surface: rgba(24, 24, 27, 0.92);
+            --surface-solid: #18181b;
+            --surface-soft: #27272a;
+            --line: rgba(244, 244, 245, 0.14);
+            --line-strong: rgba(244, 244, 245, 0.28);
+            --cyan: #7dd3fc;
+            --cyan-soft: rgba(125, 211, 252, 0.14);
+            --violet: #34d399;
+            --amber: #fbbf24;
+            --red: #f43f5e;
+            --green: #34d399;
             --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
             --shadow: 0 24px 70px rgba(0, 0, 0, 0.28);
         }
@@ -59,7 +59,7 @@
         .topbar {
             position: sticky; top: 0; z-index: 20;
             border-bottom: 1px solid var(--line);
-            background: rgba(5, 11, 20, 0.82);
+            background: rgba(9, 9, 11, 0.88);
             backdrop-filter: blur(20px);
         }
         .topbar-inner { min-height: 76px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
@@ -112,7 +112,7 @@
         .icon { width: 16px; height: 16px; flex: 0 0 auto; }
 
         .panel-grid { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(285px, 0.65fr); gap: 22px; align-items: start; }
-        .card { border: 1px solid var(--line); border-radius: 20px; background: linear-gradient(150deg, rgba(16, 30, 50, 0.88), rgba(11, 24, 42, 0.82)); box-shadow: var(--shadow); }
+        .card { border: 1px solid var(--line); border-radius: 22px; background: linear-gradient(150deg, rgba(24, 24, 27, 0.95), rgba(9, 9, 11, 0.92)); box-shadow: var(--shadow); }
         .assessment-card { padding: clamp(22px, 4vw, 34px); }
         .section-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 25px; }
         .section-heading h2 { margin-bottom: 6px; font: 700 1.2rem Manrope, sans-serif; letter-spacing: -0.025em; }
@@ -266,6 +266,67 @@
         @media (max-width: 650px) { .container { width: min(100% - 32px, 1180px); } .topbar-inner { min-height: 66px; } .topbar-meta { gap: 9px; } .workspace-pill, .live-state { display: none; } .hero { padding: 47px 0 34px; } h1 { font-size: clamp(2.25rem, 12vw, 3.35rem); } .hero-copy { font-size: 0.92rem; } .hero-snapshot { gap: 7px; } .snapshot-card { padding: 13px 11px; } .snapshot-number { font-size: 1.2rem; } .tabs { margin-bottom: 21px; } .tab { padding-left: 9px; padding-right: 9px; } .tab::after { left: 9px; right: 9px; } .tab-actions { gap: 5px; } .quiet-button span { display: none; } .assessment-card, .quality-card, .result-card { padding: 20px; } .section-heading { display: block; } .secure-label { margin-top: 13px; } .result-summary { grid-template-columns: 1fr; } .confidence-ring { width: 92px; height: 92px; } .result-grid, .detail-grid { grid-template-columns: 1fr; } .result-header, .history-heading { display: block; } .severity-badge { margin-top: 14px; } .history-tools { margin-top: 15px; display: grid; grid-template-columns: 1fr 1fr; } .search-input { width: 100%; } .filter-select { width: 100%; min-width: 0; } .footer-inner { min-height: 82px; align-items: flex-start; justify-content: center; flex-direction: column; gap: 8px; } }
         @media (max-width: 430px) { .topbar-meta { font-size: 0.75rem; } .user-avatar { display: none; } .camera-actions { grid-template-columns: 1fr; } .result-actions { flex-direction: column; } }
     </style>
+    <style id="watermelon-workspace-skin">
+        /* Watermelon workspace skin: intentionally declared last so it wins over the legacy inline field-operations rules. */
+        :root { --wm-bg:#09090b; --wm-surface:#18181b; --wm-surface-2:#27272a; --wm-border:rgba(244,244,245,.14); --wm-muted:#a1a1aa; --wm-text:#fafafa; --wm-coral:#f43f5e; --wm-emerald:#34d399; --wm-sky:#7dd3fc; --wm-amber:#fbbf24; }
+        body { background: radial-gradient(circle at 90% 0, rgba(244,63,94,.14), transparent 26rem), radial-gradient(circle at 8% 35%, rgba(52,211,153,.09), transparent 28rem), var(--wm-bg) !important; color:var(--wm-text) !important; }
+        body::before { opacity:.12 !important; background-image:linear-gradient(rgba(244,244,245,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(244,244,245,.06) 1px,transparent 1px) !important; background-size:28px 28px !important; }
+        .topbar { background:rgba(9,9,11,.9) !important; border-color:var(--wm-border) !important; }
+        .brand-mark { border-color:rgba(52,211,153,.55) !important; background:var(--wm-emerald) !important; color:#05261c !important; box-shadow:0 0 0 5px rgba(52,211,153,.12),0 12px 30px rgba(52,211,153,.18) !important; }
+        .brand-name span, .live-state, .live-dot { color:var(--wm-emerald) !important; background-color:var(--wm-emerald) !important; }
+        .live-dot { box-shadow:0 0 0 4px rgba(52,211,153,.12) !important; }
+        .logout-link { color:var(--wm-muted) !important; }
+        .logout-link:hover { color:var(--wm-text) !important; }
+        .hero { padding:72px 0 46px !important; }
+        .hero::after { border-color:rgba(244,63,94,.24) !important; box-shadow:0 0 0 35px rgba(244,63,94,.04),0 0 0 70px rgba(52,211,153,.025) !important; }
+        .eyebrow { color:var(--wm-emerald) !important; }
+        .eyebrow::before { background:var(--wm-coral) !important; }
+        h1 { font-size:clamp(2.8rem,6vw,5.5rem) !important; letter-spacing:-.08em !important; }
+        h1 span[style] { color:var(--wm-coral) !important; }
+        .hero-copy { color:var(--wm-muted) !important; }
+        .hero-copy strong { color:var(--wm-text) !important; }
+        .hero-snapshot { min-width:360px !important; gap:12px !important; }
+        .snapshot-card { background:linear-gradient(145deg,rgba(24,24,27,.96),rgba(9,9,11,.92)) !important; border-color:var(--wm-border) !important; border-radius:20px !important; box-shadow:0 18px 52px rgba(0,0,0,.3) !important; }
+        .snapshot-card.critical { border-color:rgba(244,63,94,.35) !important; }
+        .snapshot-card.stable { border-color:rgba(52,211,153,.35) !important; }
+        .snapshot-card.critical .snapshot-number { color:var(--wm-coral) !important; }
+        .snapshot-card.stable .snapshot-number { color:var(--wm-emerald) !important; }
+        .tabs { border-bottom-color:var(--wm-border) !important; }
+        .tab { color:var(--wm-muted) !important; }
+        .tab.active, .tab:hover { color:var(--wm-text) !important; }
+        .tab.active::after { background:var(--wm-emerald) !important; height:3px !important; }
+        .tab-badge { color:var(--wm-emerald) !important; background:rgba(52,211,153,.12) !important; }
+        .quiet-button { border-color:var(--wm-border) !important; color:var(--wm-sky) !important; background:rgba(125,211,252,.06) !important; border-radius:12px !important; }
+        .panel-grid { gap:16px !important; }
+        .card, .assessment-card, .quality-card, .result-card, .history-empty, .history-table-wrap { border-color:var(--wm-border) !important; border-radius:24px !important; background:linear-gradient(145deg,rgba(24,24,27,.96),rgba(9,9,11,.94)) !important; box-shadow:0 22px 65px rgba(0,0,0,.3) !important; }
+        .assessment-card { border-top:2px solid var(--wm-emerald) !important; }
+        .quality-card { border-top:2px solid var(--wm-coral) !important; }
+        .section-heading h2, .history-heading h2 { letter-spacing:-.055em !important; }
+        .secure-label .icon, .side-kicker, .result-overline, .model-chip { color:var(--wm-emerald) !important; }
+        .mode-switch { background:#09090b !important; border-color:var(--wm-border) !important; border-radius:16px !important; }
+        .mode-button { color:var(--wm-muted) !important; border-radius:12px !important; }
+        .mode-button.active { color:#06261c !important; background:var(--wm-emerald) !important; box-shadow:0 8px 24px rgba(52,211,153,.2) !important; }
+        .mode-button.active .icon { color:#06261c !important; }
+        .upload-area { min-height:250px !important; border-color:rgba(125,211,252,.38) !important; background:radial-gradient(circle at 50% 20%,rgba(125,211,252,.08),transparent 18rem),#0f0f12 !important; border-radius:20px !important; }
+        .upload-area:hover, .upload-area.dragover { border-color:var(--wm-coral) !important; background:radial-gradient(circle at 50% 20%,rgba(244,63,94,.12),transparent 18rem),#0f0f12 !important; }
+        .upload-icon { color:var(--wm-sky) !important; border-color:rgba(125,211,252,.35) !important; background:rgba(125,211,252,.1) !important; }
+        .primary-button { background:linear-gradient(115deg,var(--wm-emerald),#a7f3d0) !important; border-color:var(--wm-emerald) !important; box-shadow:0 14px 32px rgba(52,211,153,.18) !important; }
+        .primary-button:hover:not(:disabled) { box-shadow:0 18px 40px rgba(52,211,153,.3) !important; }
+        .secondary-button, .view-button { border-color:var(--wm-border) !important; color:var(--wm-sky) !important; background:rgba(125,211,252,.04) !important; }
+        .secondary-button:hover:not(:disabled), .view-button:hover { border-color:var(--wm-sky) !important; background:rgba(125,211,252,.1) !important; }
+        .loading-box, .file-ready { background:rgba(125,211,252,.06) !important; border-color:rgba(125,211,252,.24) !important; }
+        .progress-fill, .confidence-fill { background:var(--wm-emerald) !important; }
+        .result-card { border-top:2px solid var(--wm-coral) !important; }
+        .severity-badge.critical, .severity-badge.high, .danger, .hazard-box { color:#ffe4e6 !important; background:rgba(244,63,94,.15) !important; border-color:rgba(244,63,94,.5) !important; }
+        .severity-badge.stable, .success { color:#d1fae5 !important; background:rgba(52,211,153,.14) !important; border-color:rgba(52,211,153,.46) !important; }
+        .check-icon { color:var(--wm-emerald) !important; background:rgba(52,211,153,.12) !important; }
+        .efficiency-note { border-color:rgba(52,211,153,.24) !important; background:rgba(52,211,153,.08) !important; }
+        .history-table th { color:var(--wm-muted) !important; }
+        .history-table tbody tr:hover { background:rgba(125,211,252,.06) !important; }
+        footer { border-color:var(--wm-border) !important; }
+        @media(max-width:880px){.hero-snapshot{min-width:0 !important}}
+        @media(max-width:650px){.hero{padding:52px 0 34px !important}.hero-snapshot{grid-template-columns:repeat(3,1fr) !important}.snapshot-card{border-radius:16px !important}}
+    </style>
 </head>
 <body>
 <div class="page-shell">
@@ -282,7 +343,7 @@
                 <span class="live-state"><span class="live-dot" aria-hidden="true"></span> Systems ready</span>
                 <a class="logout-link" href="{{ url_for('main.damage_map') }}">Global map</a>
                 {% if current_user.is_admin %}<a class="logout-link" href="{{ url_for('main.admin') }}">Admin console</a>{% endif %}
-                <span class="user-chip"><span class="user-avatar" aria-hidden="true">{{ current_user.username[0]|upper }}</span>{{ current_user.username }}</span>
+                <span class="user-chip"><span class="user-avatar" aria-hidden="true">{{ current_user.username[0]|upper }}</span> <span>{{ current_user.username }}</span></span>
                 <a class="logout-link" href="{{ url_for('main.logout') }}">Log out</a>
             </div>
         </div>
@@ -292,8 +353,8 @@
         <div class="container hero-grid">
             <div>
                 <div class="eyebrow">AI-assisted structural triage</div>
-                <h1>See damage clearly.<br><span style="color:var(--cyan)">Act with confidence.</span><span class="sr-only">{{ current_user.username }}'s Assessment Home</span></h1>
-                <p class="hero-copy">Capture or upload a road, vehicle, building, bridge, utility asset, or other visible structure and get a fast first-pass assessment with <strong>confidence signals, severity triage, and practical next steps.</strong></p>
+                <h1 aria-label="Read the signal. Move with confidence.">Read the signal.<br><span style="color:var(--cyan)">Move with confidence.</span></h1><span class="sr-only">{{ current_user.username }}'s Assessment Home</span>
+                <p class="hero-copy">Capture or upload a road, vehicle, building, bridge, utility asset, or other visible structure. Get a structured first-pass signal with <strong>severity, hazards, confidence, and a clear next step.</strong></p>
             </div>
             <div class="hero-snapshot" aria-label="Assessment summary">
                 <div class="snapshot-card"><span class="snapshot-number" id="totalCount">0</span><span class="snapshot-label">Assessments</span></div>

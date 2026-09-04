@@ -9,19 +9,19 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        :root { --bg:#07111f; --panel:#101d30; --border:#254064; --accent:#3b82f6; --text:#e5edf7; --muted:#91a1b7; --danger:#ef4444; --green:#22c55e; }
+        :root { --bg:#09090b; --panel:#18181b; --border:#3f3f46; --accent:#34d399; --text:#fafafa; --muted:#a1a1aa; --danger:#f43f5e; --green:#34d399; }
         * { box-sizing: border-box; }
-        body { min-height: 100vh; margin: 0; background: #07111f; color: var(--text); font-family: Inter, sans-serif; display: grid; place-items: center; padding: 24px; }
+        body { min-height: 100vh; margin: 0; background: radial-gradient(circle at 20% 0, rgba(244,63,94,.16), transparent 28rem), radial-gradient(circle at 90% 100%, rgba(52,211,153,.12), transparent 25rem), var(--bg); color: var(--text); font-family: Inter, sans-serif; display: grid; place-items: center; padding: 24px; }
         .auth-shell { width: min(100%, 460px); }
         .brand { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 24px; font-weight: 700; font-size: 1.2rem; }
         .dot { width: 9px; height: 9px; border-radius: 999px; background: var(--green); }
-        .auth-card { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 30px; box-shadow: 0 24px 80px rgba(0,0,0,0.28); }
+        .auth-card { background: linear-gradient(145deg, rgba(24,24,27,.96), rgba(9,9,11,.95)); border: 1px solid var(--border); border-radius: 24px; padding: 30px; box-shadow: 0 24px 80px rgba(0,0,0,0.42); }
         h1 { font-size: 1.45rem; margin-bottom: 8px; font-weight: 700; letter-spacing: 0; }
         .lead { color: var(--muted); margin-bottom: 24px; font-size: 0.92rem; }
         label { font-size: 0.82rem; color: var(--muted); font-weight: 600; margin-bottom: 7px; }
-        .form-control { background: #0b1728; border: 1px solid var(--border); color: var(--text); border-radius: 7px; padding: 12px 13px; }
-        .form-control:focus { background: #0b1728; color: var(--text); border-color: var(--accent); box-shadow: 0 0 0 3px rgba(59,130,246,0.18); }
-        .btn-primary { width: 100%; background: var(--accent); border: 0; border-radius: 7px; padding: 12px; font-weight: 700; margin-top: 8px; }
+        .form-control { background: #09090b; border: 1px solid var(--border); color: var(--text); border-radius: 12px; padding: 12px 13px; }
+        .form-control:focus { background: #09090b; color: var(--text); border-color: var(--accent); box-shadow: 0 0 0 3px rgba(52,211,153,0.18); }
+        .btn-primary { width: 100%; background: var(--accent); color:#06261c; border: 0; border-radius: 12px; padding: 12px; font-weight: 800; margin-top: 8px; }
         .alert { border-radius: 7px; padding: 10px 12px; font-size: 0.86rem; }
         .alert-error { background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.28); color: #fecaca; }
         .alert-success { background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.28); color: #bbf7d0; }
