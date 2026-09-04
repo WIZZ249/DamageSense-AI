@@ -120,7 +120,8 @@ def create_app(config=None):
             raise RuntimeError('FLASK_SECRET_KEY must be configured in production.')
         secret_key = 'development-only-change-me'
 
-    database_url = os.getenv('DATABASE_URL', 'sqlite:///damagesense.db')
+    configured_database_url = os.getenv('DATABASE_URL', '').strip()
+    database_url = configured_database_url or 'sqlite:///damagesense.db'
     if database_url.startswith('postgres://'):
         database_url = 'postgresql://' + database_url[len('postgres://'):]
 
@@ -130,6 +131,7 @@ def create_app(config=None):
         SECRET_KEY=secret_key,
         SQLALCHEMY_DATABASE_URI=database_url,
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
+        SQLALCHEMY_ENGINE_OPTIONS={'pool_pre_ping': True},
         REQUIRE_EMAIL_VERIFICATION=os.getenv('REQUIRE_EMAIL_VERIFICATION', 'true').lower() in {'1', 'true', 'yes'},
         UPLOAD_FOLDER=os.getenv('UPLOAD_FOLDER', 'app/static/uploads'),
         MAX_CONTENT_LENGTH=max_upload_mb * 1024 * 1024,
@@ -140,6 +142,17 @@ def create_app(config=None):
 
     if config:
         app.config.update(config)
+
+    # Render's web-service filesystem is ephemeral. A local SQLite database can
+    # therefore appear to work while silently losing every account and
+    # assessment after a restart, spin-down, or deploy. Production must use a
+    # real external database (Render Postgres, Supabase Postgres, etc.).
+    if not app.config.get('TESTING') and (os.getenv('RENDER') or os.getenv('FLASK_ENV') == 'production'):
+        if not configured_database_url:
+            raise RuntimeError(
+                'DATABASE_URL must be configured in production. '
+                'Render web-service storage is ephemeral; use PostgreSQL for persistent users and assessments.'
+            )
 
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
     db.init_app(app)
