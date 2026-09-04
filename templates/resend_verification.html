@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml">
+    <link rel="stylesheet" href="{{ url_for('static', filename='theme.css', v='glass-2') }}">
+    <title>Verify Email | DamageSense AI</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { min-height: 100vh; margin: 0; background: #071914; color: #f4f7fb; font-family: Inter, system-ui, sans-serif; display: grid; place-items: center; padding: 24px; }
+        .auth-shell { width: min(100%, 460px); }
+        .brand { text-align: center; margin-bottom: 24px; font-weight: 800; font-size: 1.2rem; }
+        .dot { display: inline-block; width: 9px; height: 9px; border-radius: 999px; background: #4b9a73; margin-right: 8px; }
+        .auth-card { background: rgba(16, 37, 28, .76); border: 1px solid rgba(168, 216, 255, .18); border-radius: 18px; padding: 32px; box-shadow: 0 24px 80px rgba(0,0,0,.32); backdrop-filter: blur(18px) saturate(130%); }
+        h1 { font-size: 1.5rem; margin: 0 0 8px; }
+        .lead { color: #9ab0aa; margin: 0 0 24px; line-height: 1.6; }
+        label { display: block; font-size: .82rem; color: #b6c8c2; font-weight: 700; margin-bottom: 8px; }
+        input { width: 100%; padding: 13px 14px; border-radius: 10px; border: 1px solid #285044; background: rgba(8,27,20,.82); color: #f4f7fb; outline: none; }
+        input:focus { border-color: #a8d8ff; box-shadow: 0 0 0 3px rgba(168,216,255,.14); }
+        button { width: 100%; border: 0; border-radius: 10px; padding: 13px; margin-top: 10px; background: #a8d8ff; color: #071914; font-weight: 800; cursor: pointer; }
+        .alert { border-radius: 10px; padding: 11px 13px; margin-bottom: 16px; font-size: .88rem; }
+        .alert-error { background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.28); color: #fecaca; }
+        .alert-success { background: rgba(34,197,94,.12); border: 1px solid rgba(34,197,94,.28); color: #bbf7d0; }
+        .switch { margin-top: 20px; text-align: center; color: #9ab0aa; font-size: .9rem; }
+        a { color: #a8d8ff; text-decoration: none; font-weight: 700; }
+    </style>
+</head>
+<body>
+    <main class="auth-shell">
+        <div class="brand"><span class="dot"></span>DamageSense <span style="color:#a8d8ff">AI</span></div>
+        <section class="auth-card">
+            <h1>Verify your email</h1>
+            <p class="lead">Enter the email you used to register. If the account is waiting for verification, we'll send a fresh 24-hour verification link.</p>
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            <form method="post">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <label for="email">Email address</label>
+                <input id="email" name="email" type="email" autocomplete="email" required>
+                <button type="submit">Send verification email</button>
+            </form>
+            <div class="switch"><a href="{{ url_for('main.login') }}">Back to login</a></div>
+        </section>
+    </main>
+</body>
+</html>
