@@ -2,7 +2,7 @@ import hashlib
 import secrets
 from datetime import datetime, timedelta
 
-from flask import Blueprint, current_app, flash, redirect, render_template, request, url_for
+from flask import Blueprint, flash, render_template, request, url_for
 from sqlalchemy import func
 
 from . import db, limiter
@@ -26,15 +26,22 @@ def resend_verification():
                 return render_template('resend_verification.html')
 
             raw_token = secrets.token_urlsafe(32)
-            user.verification_token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
-            user.verification_token_expires_at = datetime.utcnow() + timedelta(hours=24)
+            token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
+            expires_at = datetime.utcnow() + timedelta(hours=24)
+
+            # Store the fresh token before delivery. If the provider rejects the message,
+            # immediately invalidate that token so an undelivered link cannot remain active.
+            user.verification_token_hash = token_hash
+            user.verification_token_expires_at = expires_at
             db.session.commit()
 
             verification_url = url_for('main.verify_email', token=raw_token, _external=True)
             if send_email_verification_email(user, verification_url):
                 flash('If that account needs verification, a new verification email has been sent.', 'success')
             else:
-                db.session.rollback()
+                user.verification_token_hash = None
+                user.verification_token_expires_at = None
+                db.session.commit()
                 flash('We could not send the verification email right now. Please try again later.', 'error')
         else:
             flash('If that account needs verification, a new verification email has been sent.', 'success')
