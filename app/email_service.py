@@ -7,38 +7,38 @@ logger = logging.getLogger(__name__)
 
 
 def email_enabled():
-    return bool(os.getenv('SENDGRID_API_KEY') and os.getenv('SENDGRID_FROM_EMAIL'))
+    return bool(os.getenv('RESEND_API_KEY') and os.getenv('RESEND_FROM_EMAIL'))
 
 
 def send_transactional_email(to_email, subject, text_content, html_content):
-    """Send one transactional email through SendGrid's v3 Mail Send API."""
-    api_key = os.getenv('SENDGRID_API_KEY')
-    from_email = os.getenv('SENDGRID_FROM_EMAIL')
+    """Send one transactional email through Resend's Email API."""
+    api_key = os.getenv('RESEND_API_KEY')
+    from_email = os.getenv('RESEND_FROM_EMAIL')
+    from_name = os.getenv('RESEND_FROM_NAME', 'DamageSense AI')
     if not api_key or not from_email:
-        logger.warning('Transactional email skipped because SendGrid is not configured.')
+        logger.warning('Transactional email skipped because Resend is not configured.')
         return False
 
     payload = {
-        'personalizations': [{'to': [{'email': to_email}], 'subject': subject}],
-        'from': {'email': from_email, 'name': os.getenv('SENDGRID_FROM_NAME', 'DamageSense AI')},
-        'content': [
-            {'type': 'text/plain', 'value': text_content},
-            {'type': 'text/html', 'value': html_content},
-        ],
+        'from': f'{from_name} <{from_email}>',
+        'to': [to_email],
+        'subject': subject,
+        'text': text_content,
+        'html': html_content,
     }
     try:
         response = requests.post(
-            'https://api.sendgrid.com/v3/mail/send',
+            'https://api.resend.com/emails',
             headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
             json=payload,
             timeout=10,
         )
-        if response.status_code not in (200, 202):
-            logger.error('SendGrid rejected email with status %s.', response.status_code)
+        if response.status_code not in (200, 201):
+            logger.error('Resend rejected email with status %s: %s', response.status_code, response.text[:500])
             return False
         return True
     except requests.RequestException:
-        logger.exception('SendGrid request failed.')
+        logger.exception('Resend request failed.')
         return False
 
 
