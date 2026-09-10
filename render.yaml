@@ -9,10 +9,12 @@ services:
     envVars:
       - key: DATABASE_URL
         fromDatabase:
-          name: damagesense-db
+          name: DamgeSense-postgresql-AI
           property: connectionString
       - key: REQUIRE_EMAIL_VERIFICATION
         value: "true"
+      - key: PUBLIC_SITE_URL
+        value: https://damagesense-ai-1.onrender.com
 
 databases:
   - name: damagesense-db
