@@ -4,35 +4,34 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml">
-    <link rel="stylesheet" href="{{ url_for('static', filename='theme.css', v='glass-2') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='theme.css', v='glass-3') }}">
     <title>Login | DamageSense AI</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        :root { --bg:#09090b; --panel:#18181b; --border:#3f3f46; --accent:#34d399; --text:#fafafa; --muted:#a1a1aa; --danger:#f43f5e; --green:#34d399; }
         * { box-sizing: border-box; }
-        body { min-height: 100vh; margin: 0; background: radial-gradient(circle at 20% 0, rgba(244,63,94,.16), transparent 28rem), radial-gradient(circle at 90% 100%, rgba(52,211,153,.12), transparent 25rem), var(--bg); color: var(--text); font-family: Inter, sans-serif; display: grid; place-items: center; padding: 24px; }
+        body { min-height: 100vh; margin: 0; font-family: Inter, sans-serif; display: grid; place-items: center; padding: 24px; }
         .auth-shell { width: min(100%, 420px); }
         .brand { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 24px; font-weight: 700; font-size: 1.2rem; }
-        .dot { width: 9px; height: 9px; border-radius: 999px; background: var(--green); }
-        .auth-card { background: linear-gradient(145deg, rgba(24,24,27,.96), rgba(9,9,11,.95)); border: 1px solid var(--border); border-radius: 24px; padding: 30px; box-shadow: 0 24px 80px rgba(0,0,0,0.42); }
+        .dot { width: 9px; height: 9px; border-radius: 999px; background: #34d399; box-shadow: 0 0 12px rgba(52,211,153,.6); }
+        .auth-card { padding: 30px; }
         h1 { font-size: 1.45rem; margin-bottom: 8px; font-weight: 700; letter-spacing: 0; }
-        .lead { color: var(--muted); margin-bottom: 24px; font-size: 0.92rem; }
-        label { font-size: 0.82rem; color: var(--muted); font-weight: 600; margin-bottom: 7px; }
-        .form-control { background: #09090b; border: 1px solid var(--border); color: var(--text); border-radius: 12px; padding: 12px 13px; }
-        .form-control:focus { background: #09090b; color: var(--text); border-color: var(--accent); box-shadow: 0 0 0 3px rgba(52,211,153,0.18); }
-        .btn-primary { width: 100%; background: var(--accent); color:#06261c; border: 0; border-radius: 12px; padding: 12px; font-weight: 800; margin-top: 8px; }
-        .alert { border-radius: 7px; padding: 10px 12px; font-size: 0.86rem; }
-        .alert-error { background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.28); color: #fecaca; }
-        .alert-success { background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.28); color: #bbf7d0; }
-        .switch { margin-top: 18px; text-align: center; color: var(--muted); font-size: 0.9rem; }
-        a { color: var(--accent); text-decoration: none; font-weight: 600; }
-        a:hover { color: var(--text); }
+        .lead { color: var(--theme-muted); margin-bottom: 24px; font-size: 0.92rem; }
+        label { display: block; font-size: 0.82rem; color: var(--theme-muted); font-weight: 600; margin-bottom: 7px; }
+        .form-control { width: 100%; padding: 12px 13px; }
+        .field-wrap { position: relative; }
+        .field-wrap .form-control { padding-right: 42px; }
+        .toggle-visibility { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); background: none !important; border: none !important; color: var(--theme-muted) !important; font-size: .78rem; font-weight: 600; padding: 6px 8px !important; cursor: pointer; letter-spacing: .02em; }
+        .toggle-visibility:hover { color: var(--theme-blue) !important; }
+        .btn-primary { width: 100%; border: 0; padding: 12px; font-weight: 800; margin-top: 8px; }
+        .btn-primary[disabled] { opacity: .7; cursor: progress; }
+        .alert { border-radius: 12px; padding: 10px 12px; font-size: 0.86rem; margin-bottom: 14px; }
+        .switch { margin-top: 18px; text-align: center; color: var(--theme-muted); font-size: 0.9rem; }
     </style>
 </head>
 <body>
     <main class="auth-shell">
-        <div class="brand"><span class="dot"></span>DamageSense <span style="color:var(--accent)">AI</span></div>
+        <div class="brand"><span class="dot"></span>DamageSense <span style="color:var(--theme-blue-strong)">AI</span></div>
         <section class="auth-card">
             <h1>Welcome back</h1>
             <p class="lead">Sign in to open your private assessment workspace.</p>
@@ -45,7 +44,7 @@
                 {% endif %}
             {% endwith %}
 
-            <form method="post" autocomplete="off">
+            <form method="post" autocomplete="off" id="login-form">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="mb-3">
                     <label for="identity">Username or email</label>
@@ -53,17 +52,35 @@
                 </div>
                 <div class="mb-3">
                     <label for="password">Password</label>
-                    <input class="form-control" id="password" name="password" type="password" autocomplete="new-password" data-lpignore="true" data-1p-ignore="true" required>
+                    <div class="field-wrap">
+                        <input class="form-control" id="password" name="password" type="password" autocomplete="new-password" data-lpignore="true" data-1p-ignore="true" required>
+                        <button type="button" class="toggle-visibility" data-target="password">SHOW</button>
+                    </div>
                 </div>
                 <div style="text-align:right;margin:-4px 0 14px;font-size:.8rem"><a href="{{ url_for('main.forgot_password') }}">Forgot password?</a></div>
                 <button class="btn btn-primary" type="submit">Login</button>
             </form>
             {% if config.get('REQUIRE_EMAIL_VERIFICATION', True) %}
-            <div style="text-align:center;margin-top:14px;font-size:.82rem;color:var(--muted)"><a href="{{ url_for('verification.resend_verification') }}">Need a new verification email?</a></div>
+            <div style="text-align:center;margin-top:14px;font-size:.82rem;color:var(--theme-muted)"><a href="{{ url_for('verification.resend_verification') }}">Need a new verification email?</a></div>
             {% endif %}
             <div class="switch">No account yet? <a href="{{ url_for('main.register') }}">Create one</a></div>
         </section>
     </main>
     {% if request.args.get('logged_out') %}<script>window.addEventListener('pageshow',function(){document.querySelectorAll('#identity,#password').forEach(function(field){field.value='';});});</script>{% endif %}
+    <script>
+        document.querySelectorAll('.toggle-visibility').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var field = document.getElementById(btn.dataset.target);
+                var showing = field.type === 'text';
+                field.type = showing ? 'password' : 'text';
+                btn.textContent = showing ? 'SHOW' : 'HIDE';
+            });
+        });
+        document.getElementById('login-form').addEventListener('submit', function (e) {
+            var btn = e.currentTarget.querySelector('button[type="submit"]');
+            btn.disabled = true;
+            btn.textContent = 'Signing in…';
+        });
+    </script>
 </body>
 </html>
