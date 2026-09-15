@@ -154,20 +154,32 @@ def register():
         elif User.query.filter((func.lower(User.username) == username.lower()) | (func.lower(User.email) == email)).first():
             flash('An account with that username or email already exists.', 'error')
         else:
-            user = User(username=username, email=email, email_verified=not current_app.config.get('REQUIRE_EMAIL_VERIFICATION', True))
+            verification_required = current_app.config.get('REQUIRE_EMAIL_VERIFICATION', True) and email_enabled()
+            user = User(username=username, email=email, email_verified=not verification_required)
             user.set_password(password)
             db.session.add(user)
             db.session.commit()
             record_audit('user_registered', target=user)
-            if current_app.config.get('REQUIRE_EMAIL_VERIFICATION', True):
+            if verification_required:
                 raw_token = secrets.token_urlsafe(32)
                 user.verification_token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
                 user.verification_token_expires_at = datetime.utcnow() + timedelta(hours=24)
                 db.session.commit()
                 verification_url = url_for('main.verify_email', token=raw_token, _external=True)
-                send_email_verification_email(user, verification_url)
-                flash('Account created. Check your email and verify your address before signing in.', 'success')
-                return redirect(url_for('main.login'))
+                if send_email_verification_email(user, verification_url):
+                    flash('Account created. Check your email and verify your address before signing in.', 'success')
+                    return redirect(url_for('main.login'))
+                # Delivery failed even though the provider is configured. Don't strand
+                # an account behind a verification link that will never arrive.
+                user.email_verified = True
+                user.verification_token_hash = None
+                user.verification_token_expires_at = None
+                db.session.commit()
+                current_app.logger.error('Verification email delivery failed for user %s; auto-verified instead.', user.id)
+                session.clear()
+                session['user_id'] = user.id
+                flash('Account created. We could not send a verification email right now, so your account is ready to use.', 'success')
+                return redirect(url_for('main.home'))
             send_registration_email(user)
             session.clear()
             session['user_id'] = user.id
@@ -563,7 +575,6 @@ def upload():
         response_data['analysis'] = analysis
         return jsonify(response_data)
 
-
     return redirect(url_for('main.home'))
 
 
@@ -590,7 +601,16 @@ def robots_txt():
 @main.route('/sitemap.xml')
 def sitemap_xml():
     site_url = os.getenv('PUBLIC_SITE_URL', 'https://damagesense-ai-1.onrender.com').rstrip('/')
-    body = f'''<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url><loc>{site_url}/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>\n  <url><loc>{site_url}/login</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>\n  <url><loc>{site_url}/register</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>\n  <url><loc>{site_url}/forgot-password</loc><changefreq>yearly</changefreq><priority>0.2</priority></url>\n  <url><loc>{site_url}/privacy</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>\n  <url><loc>{site_url}/terms</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>\n</urlset>\n'''
+    body = f'''<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>{site_url}/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
+  <url><loc>{site_url}/login</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>{site_url}/register</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>{site_url}/forgot-password</loc><changefreq>yearly</changefreq><priority>0.2</priority></url>
+  <url><loc>{site_url}/privacy</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>{site_url}/terms</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
+</urlset>
+'''
     return Response(body, mimetype='application/xml')
 
 
