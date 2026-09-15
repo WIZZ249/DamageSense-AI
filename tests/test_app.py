@@ -112,6 +112,7 @@ def test_login_page_is_not_cacheable_after_logout(client):
 
 def test_email_verification_gate_and_link(client, monkeypatch):
     client.application.config['REQUIRE_EMAIL_VERIFICATION'] = True
+    monkeypatch.setattr('app.routes.email_enabled', lambda: True)
     sent = {}
     monkeypatch.setattr('app.routes.send_email_verification_email', lambda user, url: sent.setdefault('url', url) or True)
     response = client.post('/register', data={
@@ -130,6 +131,41 @@ def test_email_verification_gate_and_link(client, monkeypatch):
     login = client.post('/login', data={'identity': 'verified@example.com', 'password': 'password123'}, follow_redirects=True)
     assert login.status_code == 200
     assert b"verified_user's Assessment Home" in login.data
+
+
+def test_registration_skips_verification_when_email_not_configured(client, monkeypatch):
+    """If REQUIRE_EMAIL_VERIFICATION is on but no mail provider is configured,
+    a new account must not be stranded behind a verification email that can
+    never be sent."""
+    client.application.config['REQUIRE_EMAIL_VERIFICATION'] = True
+    monkeypatch.setattr('app.routes.email_enabled', lambda: False)
+    response = client.post('/register', data={
+        'username': 'unconfigured_mail_user', 'email': 'unconfigured@example.com',
+        'password': 'password123', 'confirm_password': 'password123',
+    }, follow_redirects=True)
+    assert response.status_code == 200
+    with client.application.app_context():
+        user = User.query.filter_by(email='unconfigured@example.com').first()
+        assert user is not None and user.email_verified is True
+    assert b"unconfigured_mail_user's Assessment Home" in response.data
+
+
+def test_registration_auto_verifies_when_delivery_fails(client, monkeypatch):
+    """If the mail provider is configured but the send itself fails, the new
+    account should still be usable rather than permanently unverifiable."""
+    client.application.config['REQUIRE_EMAIL_VERIFICATION'] = True
+    monkeypatch.setattr('app.routes.email_enabled', lambda: True)
+    monkeypatch.setattr('app.routes.send_email_verification_email', lambda user, url: False)
+    response = client.post('/register', data={
+        'username': 'delivery_failed_user', 'email': 'delivery-failed@example.com',
+        'password': 'password123', 'confirm_password': 'password123',
+    }, follow_redirects=True)
+    assert response.status_code == 200
+    with client.application.app_context():
+        user = User.query.filter_by(email='delivery-failed@example.com').first()
+        assert user is not None and user.email_verified is True
+        assert user.verification_token_hash is None
+    assert b"delivery_failed_user's Assessment Home" in response.data
 
 
 def test_assess_requires_login(client):
