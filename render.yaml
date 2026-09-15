@@ -15,6 +15,12 @@ services:
         value: "true"
       - key: PUBLIC_SITE_URL
         value: https://damagesense-ai-1.onrender.com
+      - key: RESEND_API_KEY
+        sync: false
+      - key: RESEND_FROM_EMAIL
+        sync: false
+      - key: RESEND_FROM_NAME
+        value: DamageSense AI
 
 databases:
   - name: damagesense-db
