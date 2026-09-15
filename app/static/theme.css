@@ -92,6 +92,30 @@ a { color: var(--theme-blue) !important; }
 .btn-primary::after, .primary-button::after { content: ""; position: absolute; inset: 0; background: linear-gradient(115deg, transparent 20%, rgba(255,255,255,.55) 45%, transparent 70%); background-size: 220% 100%; opacity: 0; pointer-events: none; }
 .btn-primary:hover::after, .primary-button:hover::after { opacity: 1; animation: ds-ui-shimmer 1s ease; }
 
+/* Landing-page components: force the same glass system used by the workspace. */
+.wm-nav, .wm-instrument, .wm-tile, .wm-step, .wm-cta, .wm-signal {
+    background: linear-gradient(135deg, rgba(255,255,255,.12), rgba(255,255,255,.035)) !important;
+    border: 1px solid rgba(255,255,255,.17) !important;
+    box-shadow: 0 28px 90px rgba(0,0,0,.30), inset 0 1px 0 rgba(255,255,255,.10) !important;
+    -webkit-backdrop-filter: blur(24px) saturate(155%) !important;
+    backdrop-filter: blur(24px) saturate(155%) !important;
+}
+.wm-nav { background: rgba(5,17,19,.64) !important; }
+.wm-brand, .wm-nav-links a, .wm-button-ghost, .wm-footer a { color: var(--theme-ink) !important; }
+.wm-brand span, .wm-kicker, .wm-live, .wm-confidence { color: var(--theme-blue) !important; }
+.wm-brand-mark, .wm-kicker:before, .wm-scan-image:after { background: linear-gradient(135deg, var(--theme-red-bright), #ff879b) !important; }
+.wm-button-primary { background: linear-gradient(135deg, rgba(185,228,255,.98), rgba(111,188,239,.92)) !important; color: #06131b !important; border-color: rgba(255,255,255,.42) !important; box-shadow: 0 14px 36px rgba(120,196,244,.23) !important; }
+.wm-button-ghost { background: rgba(255,255,255,.055) !important; border-color: rgba(255,255,255,.17) !important; }
+.wm-copy h1 em, .wm-risk, .wm-step-num { color: var(--theme-red-bright) !important; }
+.wm-lede, .wm-proof, .wm-section-head p, .wm-tile p, .wm-step p, .wm-cta p, .wm-faq p, .wm-footer { color: var(--theme-muted) !important; }
+.wm-tile-icon { background: rgba(255,255,255,.07) !important; color: var(--theme-blue) !important; }
+.wm-tile:nth-child(2), .wm-tile:nth-child(3) { background: linear-gradient(135deg, rgba(255,255,255,.12), rgba(255,255,255,.035)) !important; }
+.wm-scan-view { background: rgba(4,14,24,.40) !important; border-color: rgba(168,220,255,.24) !important; }
+.wm-meter { background: rgba(255,255,255,.12) !important; }
+.wm-meter i { background: linear-gradient(90deg, var(--theme-blue-strong), var(--theme-blue)) !important; }
+.wm-instrument-foot strong { color: var(--theme-blue) !important; }
+.wm-footer { border-top-color: rgba(255,255,255,.12) !important; }
+
 @media (max-width: 650px) {
     .auth-card, .assessment-card, .quality-card, .result-card { border-radius: 18px !important; }
 }
