@@ -116,6 +116,71 @@ a { color: var(--theme-blue) !important; }
 .wm-instrument-foot strong { color: var(--theme-blue) !important; }
 .wm-footer { border-top-color: rgba(255,255,255,.12) !important; }
 
+/* Workspace legacy-theme override. upload.html carries an older inline palette;
+   these rules deliberately win so the live workspace uses the current glass UI. */
+body:has(.workspace) {
+    --ink: var(--theme-ink) !important;
+    --muted: var(--theme-muted) !important;
+    --muted-strong: #c7d4d2 !important;
+    --canvas: #071426 !important;
+    --canvas-deep: #06130f !important;
+    --surface: rgba(255,255,255,.09) !important;
+    --surface-solid: rgba(255,255,255,.10) !important;
+    --surface-soft: rgba(255,255,255,.09) !important;
+    --line: rgba(255,255,255,.14) !important;
+    --line-strong: rgba(168,220,255,.42) !important;
+    --cyan: var(--theme-blue) !important;
+    --cyan-soft: rgba(168,220,255,.11) !important;
+    --violet: #7ce7be !important;
+    --amber: #ffd166 !important;
+    --red: var(--theme-red-bright) !important;
+    --green: #52e0a4 !important;
+    --shadow: var(--theme-shadow) !important;
+}
+body:has(.workspace) .topbar {
+    background: rgba(5,17,19,.64) !important;
+    border-color: rgba(255,255,255,.13) !important;
+    box-shadow: 0 18px 55px rgba(0,0,0,.22) !important;
+}
+body:has(.workspace) .card,
+body:has(.workspace) .snapshot-card {
+    background: linear-gradient(135deg, rgba(255,255,255,.12), rgba(255,255,255,.035)) !important;
+    border-color: rgba(255,255,255,.17) !important;
+    box-shadow: 0 28px 90px rgba(0,0,0,.30), inset 0 1px 0 rgba(255,255,255,.10) !important;
+    backdrop-filter: blur(24px) saturate(155%) !important;
+}
+body:has(.workspace) .upload-area {
+    background: linear-gradient(145deg, rgba(7,19,34,.52), rgba(30,90,64,.18)) !important;
+    border-color: rgba(168,220,255,.30) !important;
+}
+body:has(.workspace) .upload-area:hover,
+body:has(.workspace) .upload-area.dragover {
+    background: linear-gradient(145deg, rgba(168,220,255,.12), rgba(52,211,153,.08)) !important;
+    border-color: rgba(168,220,255,.72) !important;
+}
+body:has(.workspace) .mode-switch {
+    background: rgba(4,14,24,.36) !important;
+    border-color: rgba(255,255,255,.14) !important;
+}
+body:has(.workspace) .mode-button.active {
+    background: rgba(255,255,255,.10) !important;
+}
+body:has(.workspace) .tab.active::after { background: linear-gradient(90deg, var(--theme-blue-strong), var(--theme-blue)) !important; }
+body:has(.workspace) .primary-button {
+    background: linear-gradient(135deg, rgba(185,228,255,.98), rgba(111,188,239,.92)) !important;
+    color: #06131b !important;
+}
+body:has(.workspace) .quiet-button,
+body:has(.workspace) .view-button {
+    background: rgba(255,255,255,.055) !important;
+    border-color: rgba(255,255,255,.17) !important;
+}
+body:has(.workspace) .brand-mark {
+    background: linear-gradient(145deg, rgba(168,220,255,.18), rgba(52,211,153,.10)) !important;
+    border-color: rgba(168,220,255,.48) !important;
+    box-shadow: 0 0 28px rgba(168,220,255,.12) !important;
+}
+
 @media (max-width: 650px) {
     .auth-card, .assessment-card, .quality-card, .result-card { border-radius: 18px !important; }
 }
