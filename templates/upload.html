@@ -3,422 +3,57 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml">
-    <link rel="stylesheet" href="{{ url_for('static', filename='theme.css', v='glass-4') }}">
-    <title>Workspace | DamageSense AI</title>
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml">
+    <link rel="stylesheet" href="{{ url_for('static', filename='theme.css', v='dashboard-1') }}">
+    <title>Dashboard | DamageSense AI</title>
     <style>
-        :root {
-            --ink: #f4f7fb;
-            --muted: #8f9bad;
-            --muted-strong: #b8c1ce;
-            --canvas: #09090b;
-            --canvas-deep: #050506;
-            --surface: rgba(24, 24, 27, 0.92);
-            --surface-solid: #18181b;
-            --surface-soft: #27272a;
-            --line: rgba(244, 244, 245, 0.14);
-            --line-strong: rgba(244, 244, 245, 0.28);
-            --cyan: #7dd3fc;
-            --cyan-soft: rgba(125, 211, 252, 0.14);
-            --violet: #34d399;
-            --amber: #fbbf24;
-            --red: #f43f5e;
-            --green: #34d399;
-            --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
-            --shadow: 0 24px 70px rgba(0, 0, 0, 0.28);
-        }
-
-        * { box-sizing: border-box; }
-        html { min-width: 320px; scroll-behavior: smooth; }
-        body {
-            min-height: 100vh;
-            margin: 0;
-            color: var(--ink);
-            font-family: "DM Sans", system-ui, sans-serif;
-            background:
-                radial-gradient(circle at 12% -5%, rgba(168, 216, 255, 0.14), transparent 28rem),
-                radial-gradient(circle at 88% 4%, rgba(30, 90, 64, 0.12), transparent 24rem),
-                linear-gradient(135deg, var(--canvas-deep), var(--canvas) 55%, #0b1728);
-            line-height: 1.5;
-        }
-        button, input, select { font: inherit; }
-        button { -webkit-tap-highlight-color: transparent; }
-        button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible {
-            outline: 3px solid rgba(168, 216, 255, 0.45);
-            outline-offset: 3px;
-        }
-        a { color: inherit; }
-        .page-shell { min-height: 100vh; display: flex; flex-direction: column; }
-        .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
-        .container { width: min(1180px, calc(100% - 48px)); margin: 0 auto; }
-
-        .topbar {
-            position: sticky; top: 0; z-index: 20;
-            border-bottom: 1px solid var(--line);
-            background: rgba(9, 9, 11, 0.88);
-            backdrop-filter: blur(20px);
-        }
-        .topbar-inner { min-height: 76px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
-        .brand { display: inline-flex; align-items: center; gap: 12px; text-decoration: none; }
-        .brand-mark {
-            width: 35px; height: 35px; border: 1px solid rgba(168, 216, 255, 0.55); border-radius: 11px;
-            display: grid; place-items: center; color: var(--cyan);
-            background: linear-gradient(145deg, rgba(168, 216, 255, 0.2), rgba(30, 90, 64, 0.16));
-            box-shadow: 0 0 24px rgba(168, 216, 255, 0.15);
-        }
-        .brand-mark svg { width: 19px; height: 19px; }
-        .brand-name { font-family: Manrope, sans-serif; font-size: 1rem; font-weight: 800; letter-spacing: -0.02em; }
-        .brand-name span { color: var(--cyan); }
-        .topbar-meta { display: flex; align-items: center; gap: 17px; color: var(--muted); font-size: 0.82rem; }
-        .workspace-pill, .live-state { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
-        .workspace-pill { color: var(--muted-strong); padding-right: 17px; border-right: 1px solid var(--line); }
-        .live-dot { width: 7px; height: 7px; background: var(--green); border-radius: 50%; box-shadow: 0 0 0 4px rgba(75, 154, 115, 0.09); }
-        .user-chip { display: inline-flex; align-items: center; gap: 8px; color: var(--ink); font-weight: 600; }
-        .user-avatar { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 9px; background: var(--surface-soft); color: var(--cyan); font-size: 0.72rem; border: 1px solid var(--line); }
-        .logout-link { color: var(--muted); text-decoration: none; transition: color 180ms var(--ease-out); }
-        .logout-link:hover { color: var(--ink); }
-
-        .hero { padding: 66px 0 46px; position: relative; overflow: hidden; }
-        .hero::after { content: ""; position: absolute; width: 320px; height: 320px; right: -170px; top: 10px; border: 1px solid rgba(30, 90, 64, 0.16); border-radius: 50%; box-shadow: 0 0 0 35px rgba(30, 90, 64, 0.025), 0 0 0 70px rgba(30, 90, 64, 0.018); pointer-events: none; }
-        .eyebrow { display: inline-flex; align-items: center; gap: 9px; color: var(--cyan); font-size: 0.71rem; letter-spacing: 0.14em; font-weight: 700; text-transform: uppercase; }
-        .eyebrow::before { content: ""; width: 24px; height: 1px; background: var(--cyan); }
-        .hero-grid { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 40px; align-items: end; }
-        h1, h2, h3, p { margin-top: 0; }
-        h1 { max-width: 650px; margin-bottom: 16px; font: 800 clamp(2.4rem, 5vw, 4.3rem)/1.04 Manrope, sans-serif; letter-spacing: -0.055em; }
-        .hero-copy { max-width: 580px; margin-bottom: 0; color: var(--muted); font-size: 1.03rem; }
-        .hero-copy strong { color: var(--muted-strong); font-weight: 600; }
-        .hero-snapshot { display: grid; grid-template-columns: repeat(3, minmax(90px, 1fr)); gap: 10px; min-width: 330px; }
-        .snapshot-card { padding: 16px 15px 14px; border: 1px solid var(--line); background: rgba(16, 30, 50, 0.58); border-radius: 15px; box-shadow: var(--shadow); }
-        .snapshot-number { display: block; margin-bottom: 4px; color: var(--ink); font: 700 1.45rem Manrope, sans-serif; }
-        .snapshot-label { color: var(--muted); font-size: 0.69rem; text-transform: uppercase; letter-spacing: 0.08em; }
-        .snapshot-card.critical .snapshot-number { color: var(--red); }
-        .snapshot-card.stable .snapshot-number { color: var(--green); }
-
-        .workspace { padding-bottom: 68px; }
-        .tabs { display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--line); margin-bottom: 32px; }
-        .tab { position: relative; padding: 15px 18px 14px; border: 0; background: transparent; color: var(--muted); cursor: pointer; font-weight: 700; font-size: 0.86rem; transition: color 180ms var(--ease-out); }
-        .tab::after { content: ""; position: absolute; left: 18px; right: 18px; bottom: -1px; height: 2px; background: transparent; border-radius: 2px 2px 0 0; transition: background 180ms var(--ease-out); }
-        .tab:hover, .tab.active { color: var(--ink); }
-        .tab.active::after { background: var(--cyan); }
-        .tab-badge { display: inline-grid; place-items: center; min-width: 22px; height: 20px; padding: 0 6px; margin-left: 6px; border-radius: 999px; background: var(--cyan-soft); color: var(--cyan); font-size: 0.68rem; }
-        .tab-actions { margin-left: auto; display: flex; align-items: center; gap: 9px; }
-        .quiet-button { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: 10px; background: transparent; color: var(--muted-strong); padding: 8px 11px; font-size: 0.76rem; cursor: pointer; transition: border-color 180ms var(--ease-out), color 180ms var(--ease-out), transform 160ms var(--ease-out); }
-        .quiet-button:hover { border-color: var(--line-strong); color: var(--ink); }
-        .quiet-button:active, .primary-button:active, .mode-button:active { transform: scale(0.97); }
-        .icon { width: 16px; height: 16px; flex: 0 0 auto; }
-
-        .panel-grid { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(285px, 0.65fr); gap: 22px; align-items: start; }
-        .card { border: 1px solid var(--line); border-radius: 22px; background: linear-gradient(150deg, rgba(24, 24, 27, 0.95), rgba(9, 9, 11, 0.92)); box-shadow: var(--shadow); }
-        .assessment-card { padding: clamp(22px, 4vw, 34px); }
-        .section-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 25px; }
-        .section-heading h2 { margin-bottom: 6px; font: 700 1.2rem Manrope, sans-serif; letter-spacing: -0.025em; }
-        .section-heading p { margin-bottom: 0; color: var(--muted); font-size: 0.84rem; }
-        .secure-label { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 0.71rem; white-space: nowrap; }
-        .secure-label .icon { color: var(--green); width: 14px; height: 14px; }
-
-        .mode-switch { display: grid; grid-template-columns: 1fr 1fr; padding: 4px; margin-bottom: 18px; border: 1px solid var(--line); border-radius: 13px; background: rgba(4, 11, 20, 0.32); }
-        .mode-button { display: inline-flex; align-items: center; justify-content: center; gap: 9px; padding: 11px 12px; border: 0; border-radius: 9px; color: var(--muted); background: transparent; cursor: pointer; font-size: 0.82rem; font-weight: 700; transition: color 180ms var(--ease-out), background 180ms var(--ease-out), transform 160ms var(--ease-out); }
-        .mode-button.active { color: var(--ink); background: var(--surface-soft); box-shadow: 0 7px 22px rgba(0, 0, 0, 0.16); }
-        .mode-button.active .icon { color: var(--cyan); }
-
-        .upload-area { position: relative; min-height: 226px; display: grid; place-items: center; padding: 28px; overflow: hidden; border: 1px dashed rgba(145, 169, 201, 0.34); border-radius: 16px; background: linear-gradient(145deg, rgba(7, 19, 34, 0.75), rgba(13, 34, 54, 0.5)); cursor: pointer; transition: border-color 180ms var(--ease-out), background 180ms var(--ease-out), transform 180ms var(--ease-out); }
-        .upload-area::before { content: ""; position: absolute; inset: 12px; border: 1px solid rgba(168, 216, 255, 0.07); border-radius: 11px; pointer-events: none; }
-        .upload-area:hover, .upload-area.dragover { border-color: var(--cyan); background: linear-gradient(145deg, rgba(168, 216, 255, 0.11), rgba(30, 90, 64, 0.08)); transform: translateY(-2px); }
-        .upload-area input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
-        .upload-content { position: relative; text-align: center; pointer-events: none; }
-        .upload-icon { width: 52px; height: 52px; display: grid; place-items: center; margin: 0 auto 15px; border: 1px solid rgba(168, 216, 255, 0.27); border-radius: 16px; background: var(--cyan-soft); color: var(--cyan); }
-        .upload-icon .icon { width: 23px; height: 23px; }
-        .upload-title { margin-bottom: 7px; color: var(--ink); font-weight: 700; font-size: 0.95rem; }
-        .upload-subtitle { margin-bottom: 13px; color: var(--muted); font-size: 0.79rem; }
-        .format-note { color: #6f8299; font-size: 0.69rem; }
-        .file-ready { display: none; width: 100%; align-items: center; justify-content: space-between; gap: 14px; margin-top: 13px; padding: 10px 12px; border: 1px solid rgba(168, 216, 255, 0.25); border-radius: 11px; background: rgba(168, 216, 255, 0.07); }
-        .file-ready.visible { display: flex; animation: rise-in 240ms var(--ease-out) both; }
-        .file-summary { min-width: 0; display: flex; align-items: center; gap: 10px; }
-        .file-summary .icon { color: var(--cyan); }
-        .file-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink); font-size: 0.78rem; font-weight: 600; }
-        .file-size { color: var(--muted); font-size: 0.69rem; }
-        .remove-file { display: grid; place-items: center; width: 25px; height: 25px; border: 0; border-radius: 7px; color: var(--muted); background: transparent; cursor: pointer; }
-        .remove-file:hover { color: var(--red); background: rgba(255, 116, 126, 0.1); }
-
-        .camera-panel { display: none; margin-bottom: 18px; }
-        .camera-frame { position: relative; overflow: hidden; display: grid; place-items: center; aspect-ratio: 4 / 3; border: 1px solid var(--line); border-radius: 16px; background: var(--canvas-deep); }
-        .camera-frame::after { content: ""; position: absolute; inset: 18px; border: 1px solid rgba(168, 216, 255, 0.48); border-radius: 10px; opacity: 0; pointer-events: none; transition: opacity 180ms var(--ease-out); }
-        .camera-frame.live::after { opacity: 1; }
-        .camera-frame video, .camera-frame img { width: 100%; height: 100%; object-fit: cover; display: block; }
-        .camera-empty { max-width: 260px; padding: 22px; color: var(--muted); text-align: center; font-size: 0.82rem; }
-        .camera-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; margin-top: 10px; }
-        .secondary-button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 10px 8px; border: 1px solid var(--line); border-radius: 10px; color: var(--muted-strong); background: transparent; cursor: pointer; font-size: 0.75rem; font-weight: 700; transition: border-color 180ms var(--ease-out), color 180ms var(--ease-out), background 180ms var(--ease-out), transform 160ms var(--ease-out); }
-        .secondary-button:hover:not(:disabled) { border-color: var(--line-strong); color: var(--ink); background: rgba(255,255,255,0.03); }
-        .secondary-button:disabled { opacity: 0.42; cursor: not-allowed; }
-        .camera-note { margin: 9px 0 0; color: var(--muted); font-size: 0.7rem; }
-
-        .primary-button { position: relative; overflow: hidden; width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 9px; margin-top: 18px; padding: 14px 18px; border: 1px solid rgba(168, 216, 255, 0.55); border-radius: 12px; color: #07151c; background: linear-gradient(115deg, var(--cyan), #8be0c2); box-shadow: 0 12px 28px rgba(168, 216, 255, 0.16); cursor: pointer; font-weight: 800; font-size: 0.86rem; transition: transform 160ms var(--ease-out), box-shadow 180ms var(--ease-out), filter 180ms var(--ease-out); }
-        .primary-button:hover:not(:disabled) { filter: brightness(1.06); box-shadow: 0 16px 34px rgba(168, 216, 255, 0.23); }
-        .primary-button:disabled { opacity: 0.58; cursor: not-allowed; box-shadow: none; }
-        .primary-button .button-spinner { display: none; width: 15px; height: 15px; border: 2px solid rgba(7, 21, 28, 0.24); border-top-color: #07151c; border-radius: 50%; animation: spin 700ms linear infinite; }
-        .primary-button.loading .button-spinner { display: inline-block; }
-        .primary-button.loading .button-icon { display: none; }
-        .loading-box { display: none; margin-top: 16px; padding: 14px 15px; border: 1px solid rgba(168, 216, 255, 0.16); border-radius: 12px; background: rgba(168, 216, 255, 0.06); }
-        .loading-box.visible { display: block; animation: rise-in 220ms var(--ease-out) both; }
-        .loading-meta { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 9px; color: var(--muted-strong); font-size: 0.73rem; }
-        .loading-meta strong { color: var(--cyan); font-weight: 700; }
-        .progress-track { height: 5px; overflow: hidden; border-radius: 999px; background: rgba(145, 169, 201, 0.14); }
-        .progress-fill { width: 15%; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--cyan), var(--violet)); transition: width 420ms var(--ease-out); }
-
-        .quality-card { padding: 25px; }
-        .side-kicker { display: flex; align-items: center; justify-content: space-between; margin-bottom: 9px; color: var(--cyan); font-size: 0.69rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.12em; }
-        .side-kicker .icon { width: 15px; height: 15px; }
-        .quality-card h3 { margin-bottom: 8px; font: 700 1.05rem Manrope, sans-serif; letter-spacing: -0.025em; }
-        .quality-card > p { margin-bottom: 21px; color: var(--muted); font-size: 0.8rem; }
-        .checklist { display: grid; gap: 12px; list-style: none; padding: 0; margin: 0; }
-        .checklist li { display: flex; align-items: flex-start; gap: 10px; color: var(--muted-strong); font-size: 0.78rem; }
-        .check-icon { display: grid; place-items: center; flex: 0 0 auto; width: 19px; height: 19px; margin-top: 1px; border: 1px solid rgba(75, 154, 115, 0.28); border-radius: 7px; color: var(--green); background: rgba(75, 154, 115, 0.09); }
-        .check-icon .icon { width: 12px; height: 12px; }
-        .quality-divider { height: 1px; margin: 23px 0 18px; background: var(--line); }
-        .efficiency-note { display: flex; gap: 10px; padding: 12px; border-radius: 11px; background: rgba(30, 90, 64, 0.08); color: var(--muted-strong); font-size: 0.73rem; }
-        .efficiency-note .icon { flex: 0 0 auto; color: var(--violet); }
-        .efficiency-note strong { display: block; margin-bottom: 2px; color: var(--ink); font-size: 0.75rem; }
-
-        .result-card { display: none; margin-top: 22px; padding: 25px; border: 1px solid rgba(168, 216, 255, 0.23); border-radius: 18px; background: linear-gradient(145deg, rgba(16, 44, 57, 0.83), rgba(16, 30, 50, 0.88)); animation: rise-in 300ms var(--ease-out) both; }
-        .result-card.visible { display: block; }
-        .result-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 22px; }
-        .result-overline { margin-bottom: 5px; color: var(--cyan); font-size: 0.68rem; font-weight: 800; letter-spacing: 0.13em; text-transform: uppercase; }
-        .result-title { margin-bottom: 0; font: 700 1.28rem Manrope, sans-serif; letter-spacing: -0.03em; }
-        .severity-badge { display: inline-flex; align-items: center; gap: 7px; padding: 8px 12px; border: 1px solid; border-radius: 999px; font-size: 0.72rem; font-weight: 800; white-space: nowrap; }
-        .severity-badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
-        .critical { color: var(--red); border-color: rgba(255, 116, 126, 0.28); background: rgba(255, 116, 126, 0.1); }
-        .stable { color: var(--green); border-color: rgba(75, 154, 115, 0.28); background: rgba(75, 154, 115, 0.1); }
-        .unknown { color: var(--amber); border-color: rgba(245, 191, 103, 0.28); background: rgba(245, 191, 103, 0.1); }
-        .result-summary { display: grid; grid-template-columns: minmax(0, 1fr) 150px; gap: 18px; align-items: center; margin-bottom: 18px; }
-        .result-lead { padding: 17px; border: 1px solid var(--line); border-radius: 13px; background: rgba(4, 11, 20, 0.23); }
-        .result-label { margin-bottom: 5px; color: var(--muted); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.1em; }
-        .result-classification { margin-bottom: 3px; color: var(--ink); font: 700 1.25rem Manrope, sans-serif; overflow-wrap: anywhere; }
-        .result-caption { color: var(--muted); font-size: 0.76rem; }
-        .confidence-ring { --confidence: 0%; position: relative; width: 104px; height: 104px; display: grid; place-items: center; margin: 0 auto; border-radius: 50%; background: conic-gradient(var(--cyan) var(--confidence), rgba(145, 169, 201, 0.14) 0); }
-        .confidence-ring::before { content: ""; position: absolute; inset: 8px; border-radius: 50%; background: var(--surface-solid); }
-        .confidence-content { position: relative; text-align: center; }
-        .confidence-number { display: block; color: var(--ink); font: 800 1.17rem Manrope, sans-serif; }
-        .confidence-word { color: var(--muted); font-size: 0.61rem; text-transform: uppercase; letter-spacing: 0.08em; }
-        .result-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 12px; }
-        .result-item { min-width: 0; padding: 12px 14px; border: 1px solid var(--line); border-radius: 11px; background: rgba(4, 11, 20, 0.2); }
-        .result-item-label { margin-bottom: 5px; color: var(--muted); font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.08em; }
-        .result-item-value { color: var(--muted-strong); font-size: 0.79rem; font-weight: 700; overflow-wrap: anywhere; }
-        .recommendation { padding: 16px; border-left: 2px solid var(--cyan); border-radius: 0 12px 12px 0; background: rgba(168, 216, 255, 0.06); }
-        .detail-header { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; margin-top:18px; padding-top:18px; border-top:1px solid var(--line); }.detail-header h3 { margin:5px 0 0; font:700 1rem Manrope,sans-serif; }.model-chip { padding:5px 8px; border:1px solid rgba(168,216,255,.28); border-radius:999px; color:var(--cyan); background:var(--cyan-soft); font-size:.65rem; font-weight:800; white-space:nowrap; }.detail-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin-top:12px; }.detail-box { padding:14px; border:1px solid var(--line); border-radius:13px; background:rgba(4,17,11,.42); }.detail-box h4 { margin:0 0 8px; color:var(--muted-strong); font-size:.73rem; text-transform:uppercase; letter-spacing:.08em; }.detail-box p,.detail-box li { color:var(--muted); font-size:.78rem; line-height:1.45; }.detail-box p { margin:0; }.detail-box ul { margin:0; padding-left:16px; }.detail-box li+li { margin-top:5px; }.hazard-box { border-color:rgba(143,48,56,.48); background:rgba(143,48,56,.08); }.hazard-box h4 { color:#e3a6aa; }
-        .recommendation-title { display: flex; align-items: center; gap: 7px; margin-bottom: 6px; color: var(--cyan); font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; }
-        .recommendation-title .icon { width: 14px; height: 14px; }
-        .recommendation-summary { margin-bottom: 4px; color: var(--ink); font-size: 0.83rem; font-weight: 700; }
-        .recommendation-next { margin: 0; color: var(--muted); font-size: 0.77rem; }
-        .result-actions { display: flex; gap: 9px; margin-top: 17px; }
-        .result-actions .secondary-button { flex: 1; }
-
-        .history-panel { display: none; }
-        .history-panel.visible { display: block; animation: rise-in 240ms var(--ease-out) both; }
-        .history-heading { display: flex; align-items: end; justify-content: space-between; gap: 18px; margin-bottom: 20px; }
-        .history-heading h2 { margin-bottom: 5px; font: 700 1.32rem Manrope, sans-serif; letter-spacing: -0.03em; }
-        .history-heading p { margin-bottom: 0; color: var(--muted); font-size: 0.8rem; }
-        .history-tools { display: flex; gap: 9px; }
-        .field-wrap { position: relative; }
-        .field-wrap .icon { position: absolute; left: 11px; top: 50%; color: var(--muted); transform: translateY(-50%); }
-        .search-input, .filter-select { height: 39px; border: 1px solid var(--line); border-radius: 10px; color: var(--muted-strong); background: rgba(16, 30, 50, 0.7); font-size: 0.76rem; transition: border-color 180ms var(--ease-out); }
-        .search-input { width: 210px; padding: 0 12px 0 34px; }
-        .filter-select { min-width: 135px; padding: 0 28px 0 11px; }
-        .search-input::placeholder { color: #687991; }
-        .search-input:focus, .filter-select:focus { border-color: rgba(168, 216, 255, 0.55); outline: none; }
-        .history-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 11px; color: var(--muted); font-size: 0.74rem; }
-        .history-count strong { color: var(--muted-strong); }
-        .history-table-wrap { overflow: auto; border: 1px solid var(--line); border-radius: 17px; background: rgba(16, 30, 50, 0.7); box-shadow: var(--shadow); }
-        .history-table { width: 100%; min-width: 720px; border-collapse: collapse; }
-        .history-table th { padding: 14px 16px; border-bottom: 1px solid var(--line); color: var(--muted); text-align: left; font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; white-space: nowrap; }
-        .history-table td { padding: 13px 16px; border-bottom: 1px solid rgba(145, 169, 201, 0.1); color: var(--muted-strong); font-size: 0.77rem; vertical-align: middle; }
-        .history-table tr:last-child td { border-bottom: 0; }
-        .history-table tbody tr { transition: background 160ms var(--ease-out); }
-        .history-table tbody tr:hover { background: rgba(168, 216, 255, 0.045); }
-        .thumb { width: 43px; height: 43px; display: block; object-fit: cover; border: 1px solid var(--line-strong); border-radius: 9px; background: var(--canvas-deep); }
-        .file-cell { max-width: 190px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink); font-weight: 600; }
-        .history-classification { color: var(--ink); font-weight: 600; }
-        .history-rec { max-width: 205px; color: var(--muted); font-size: 0.72rem; }
-        .view-button { padding: 6px 9px; border: 1px solid var(--line); border-radius: 8px; color: var(--cyan); background: transparent; cursor: pointer; font-size: 0.7rem; font-weight: 700; }
-        .view-button:hover { border-color: rgba(168, 216, 255, 0.45); background: var(--cyan-soft); }
-        .history-empty { display: none; padding: 58px 25px; border: 1px dashed var(--line-strong); border-radius: 17px; color: var(--muted); text-align: center; background: rgba(16, 30, 50, 0.5); }
-        .history-empty.visible { display: block; animation: rise-in 220ms var(--ease-out) both; }
-        .history-empty strong { display: block; margin-bottom: 6px; color: var(--ink); font: 700 1.05rem Manrope, sans-serif; }
-        .history-empty .icon { width: 31px; height: 31px; margin-bottom: 12px; color: var(--cyan); }
-
-        .toast { position: fixed; right: 24px; bottom: 24px; z-index: 40; max-width: min(360px, calc(100% - 48px)); display: flex; align-items: flex-start; gap: 10px; padding: 13px 14px; border: 1px solid var(--line-strong); border-radius: 13px; color: var(--muted-strong); background: rgba(16, 30, 50, 0.96); box-shadow: var(--shadow); font-size: 0.78rem; opacity: 0; transform: translateY(12px); pointer-events: none; transition: opacity 180ms var(--ease-out), transform 180ms var(--ease-out); }
-        .toast.visible { opacity: 1; transform: translateY(0); }
-        .toast .icon { color: var(--cyan); }
-        footer { margin-top: auto; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.72rem; }
-        .footer-inner { min-height: 70px; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
-        .footer-links { display: flex; gap: 18px; }
-        .footer-links a { color: var(--muted); text-decoration: none; transition: color 180ms var(--ease-out); }
-        .footer-links a:hover { color: var(--ink); }
-        .noscript { margin: 20px auto; padding: 12px 16px; border: 1px solid rgba(245, 191, 103, 0.3); border-radius: 10px; color: var(--amber); background: rgba(245, 191, 103, 0.08); }
-
-        @keyframes rise-in { from { opacity: 0; transform: translateY(9px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; } }
-        @media (max-width: 880px) { .hero-grid { grid-template-columns: 1fr; align-items: start; } .hero-snapshot { width: min(100%, 430px); min-width: 0; } .panel-grid { grid-template-columns: 1fr; } .quality-card { order: -1; } }
-        @media (max-width: 650px) { .container { width: min(100% - 32px, 1180px); } .topbar-inner { min-height: 66px; } .topbar-meta { gap: 9px; } .workspace-pill, .live-state { display: none; } .hero { padding: 47px 0 34px; } h1 { font-size: clamp(2.25rem, 12vw, 3.35rem); } .hero-copy { font-size: 0.92rem; } .hero-snapshot { gap: 7px; } .snapshot-card { padding: 13px 11px; } .snapshot-number { font-size: 1.2rem; } .tabs { margin-bottom: 21px; } .tab { padding-left: 9px; padding-right: 9px; } .tab::after { left: 9px; right: 9px; } .tab-actions { gap: 5px; } .quiet-button span { display: none; } .assessment-card, .quality-card, .result-card { padding: 20px; } .section-heading { display: block; } .secure-label { margin-top: 13px; } .result-summary { grid-template-columns: 1fr; } .confidence-ring { width: 92px; height: 92px; } .result-grid, .detail-grid { grid-template-columns: 1fr; } .result-header, .history-heading { display: block; } .severity-badge { margin-top: 14px; } .history-tools { margin-top: 15px; display: grid; grid-template-columns: 1fr 1fr; } .search-input { width: 100%; } .filter-select { width: 100%; min-width: 0; } .footer-inner { min-height: 82px; align-items: flex-start; justify-content: center; flex-direction: column; gap: 8px; } }
-        @media (max-width: 430px) { .topbar-meta { font-size: 0.75rem; } .user-avatar { display: none; } .camera-actions { grid-template-columns: 1fr; } .result-actions { flex-direction: column; } }
+        :root{--ds-bg:#07111f;--ds-bg-2:#0b1a2b;--ds-panel:rgba(15,29,47,.86);--ds-panel-strong:#10233b;--ds-line:rgba(148,190,226,.18);--ds-text:#f6f9fd;--ds-muted:#8fa4ba;--ds-cyan:#20c7ff;--ds-blue:#5b8cff;--ds-coral:#ff806b;--ds-lime:#a5e65a;--ds-violet:#a36dff;--ds-shadow:0 22px 60px rgba(0,0,0,.28);--ds-radius:18px}
+        *{box-sizing:border-box}html{background:var(--ds-bg)!important;min-width:320px}body{margin:0;min-height:100vh;color:var(--ds-text)!important;background:radial-gradient(circle at 75% -5%,rgba(32,199,255,.1),transparent 28rem),linear-gradient(135deg,#06101d 0%,#081625 55%,#0b1d31 100%)!important;font-family:"DM Sans",Inter,system-ui,sans-serif;line-height:1.45}button,input,select{font:inherit}button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{outline:3px solid rgba(32,199,255,.4);outline-offset:3px}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+        .app-shell{min-height:100vh;display:flex}.sidebar{position:fixed;inset:0 auto 0 0;z-index:20;width:254px;display:flex;flex-direction:column;padding:26px 18px 18px;background:rgba(4,13,25,.88);border-right:1px solid var(--ds-line);backdrop-filter:blur(22px)}.brand{display:flex;align-items:center;gap:11px;padding:0 10px 30px;color:var(--ds-text);text-decoration:none;font-weight:850;letter-spacing:-.035em}.brand-mark{width:38px;height:38px;display:grid;place-items:center;border:1px solid rgba(32,199,255,.65);border-radius:13px;color:var(--ds-cyan);background:linear-gradient(145deg,rgba(32,199,255,.2),rgba(163,109,255,.18));box-shadow:0 0 28px rgba(32,199,255,.16)}.brand-mark svg{width:22px;height:22px}.brand-name{font-size:1.02rem}.brand-name span{color:var(--ds-cyan)}.sidebar-label{margin:0 12px 10px;color:#637b95;font-size:.65rem;font-weight:800;letter-spacing:.13em;text-transform:uppercase}.side-nav{display:grid;gap:5px}.side-nav a{display:flex;align-items:center;gap:12px;padding:12px 13px;border:1px solid transparent;border-radius:12px;color:#96a9bc;text-decoration:none;font-size:.84rem;font-weight:650;transition:.2s ease}.side-nav a:hover,.side-nav a.active{color:var(--ds-text);background:linear-gradient(90deg,rgba(32,199,255,.14),rgba(32,199,255,.04));border-color:rgba(32,199,255,.18)}.side-nav a.active{box-shadow:inset 3px 0 var(--ds-cyan),0 8px 20px rgba(0,0,0,.12)}.side-nav svg{width:18px;height:18px;flex:0 0 auto}.side-spacer{flex:1}.upgrade-card{padding:16px;border:1px solid rgba(163,109,255,.35);border-radius:15px;background:linear-gradient(145deg,rgba(163,109,255,.2),rgba(32,199,255,.08));box-shadow:var(--ds-shadow)}.upgrade-card strong{display:block;margin-bottom:6px;font-size:.83rem}.upgrade-card p{margin:0 0 13px;color:#aab8ca;font-size:.72rem;line-height:1.45}.upgrade-card a{display:block;padding:9px;border-radius:10px;background:linear-gradient(90deg,var(--ds-blue),var(--ds-violet));color:white;text-align:center;text-decoration:none;font-size:.74rem;font-weight:800}.support-link{display:flex;align-items:center;gap:9px;padding:17px 10px 3px;color:#7990a8;text-decoration:none;font-size:.72rem}.support-link svg{width:18px;color:var(--ds-cyan)}
+        .main-area{width:calc(100% - 254px);margin-left:254px}.topbar{position:sticky;top:0;z-index:15;min-height:82px;display:flex;align-items:center;justify-content:space-between;gap:20px;padding:0 clamp(22px,4vw,46px);background:rgba(7,17,31,.8);border-bottom:1px solid var(--ds-line);backdrop-filter:blur(20px)}.topbar-copy{display:flex;align-items:baseline;gap:10px}.topbar-copy h1{margin:0;font-size:1.02rem;letter-spacing:-.03em}.topbar-copy span{color:var(--ds-muted);font-size:.76rem}.topbar-actions{display:flex;align-items:center;gap:14px}.search-box{display:flex;align-items:center;gap:9px;width:min(270px,28vw);padding:10px 12px;border:1px solid var(--ds-line);border-radius:11px;background:rgba(255,255,255,.035);color:#7f95ac}.search-box input{width:100%;border:0;outline:0;background:none;color:var(--ds-text);font-size:.76rem}.search-box input::placeholder{color:#6d8299}.notification{position:relative;display:grid;place-items:center;width:37px;height:37px;border:1px solid var(--ds-line);border-radius:11px;color:#b4c5d7;background:rgba(255,255,255,.035)}.notification svg{width:18px}.notification b{position:absolute;right:-4px;top:-5px;display:grid;place-items:center;width:17px;height:17px;border-radius:50%;background:var(--ds-coral);color:white;font-size:.62rem}.user-menu{display:flex;align-items:center;gap:9px;color:#b4c5d7;font-size:.76rem}.avatar{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:linear-gradient(145deg,#f0bf9a,#805b79);color:white;font-size:.72rem;font-weight:800;box-shadow:0 0 0 3px rgba(255,255,255,.06)}.logout{color:#91a6ba;text-decoration:none;font-size:.74rem}.content{padding:35px clamp(22px,4vw,46px) 54px;max-width:1560px;margin:0 auto}.hero-row{display:flex;align-items:end;justify-content:space-between;gap:24px;margin-bottom:25px}.hero-row h2{margin:0 0 5px;font-size:clamp(1.6rem,2.5vw,2.25rem);letter-spacing:-.05em}.hero-row p{margin:0;color:var(--ds-muted);font-size:.84rem}.primary-button{display:inline-flex;align-items:center;justify-content:center;gap:9px;padding:12px 16px;border:1px solid rgba(255,255,255,.27);border-radius:11px;color:#041824;background:linear-gradient(100deg,#22c9ff,#66e3c0);box-shadow:0 12px 28px rgba(32,199,255,.22);font-size:.78rem;font-weight:850;cursor:pointer;transition:.2s ease}.primary-button:hover{transform:translateY(-2px);box-shadow:0 16px 36px rgba(32,199,255,.3)}.primary-button svg{width:17px}
+        .stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px}.stat-card{position:relative;overflow:hidden;padding:18px 20px;border:1px solid var(--ds-line);border-radius:var(--ds-radius);background:linear-gradient(145deg,rgba(18,39,63,.82),rgba(10,25,42,.82));box-shadow:var(--ds-shadow)}.stat-card:after{content:"";position:absolute;right:-12px;bottom:-26px;width:115px;height:80px;border-radius:50%;background:rgba(32,199,255,.08);filter:blur(18px)}.stat-top{display:flex;align-items:center;justify-content:space-between;gap:12px;color:#aabdd1;font-size:.72rem}.stat-icon{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;background:rgba(32,199,255,.14);color:var(--ds-cyan)}.stat-icon svg{width:18px}.stat-number{display:block;margin:11px 0 4px;font-size:1.7rem;letter-spacing:-.05em}.stat-trend{font-size:.7rem;color:var(--ds-lime)}.stat-card.coral .stat-icon{color:var(--ds-coral);background:rgba(255,128,107,.14)}.stat-card.coral .stat-trend{color:var(--ds-coral)}.stat-card.violet .stat-icon{color:var(--ds-violet);background:rgba(163,109,255,.14)}
+        .dashboard-grid{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(290px,.78fr);gap:18px;align-items:start}.panel{border:1px solid var(--ds-line);border-radius:var(--ds-radius);background:linear-gradient(145deg,rgba(16,35,59,.9),rgba(9,23,39,.9));box-shadow:var(--ds-shadow)}.panel-header{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:19px 20px;border-bottom:1px solid var(--ds-line)}.panel-header h3{margin:0;font-size:.95rem;letter-spacing:-.025em}.panel-header p{margin:4px 0 0;color:var(--ds-muted);font-size:.72rem}.panel-header a{color:var(--ds-cyan);text-decoration:none;font-size:.72rem;font-weight:750}.assessment-panel{overflow:hidden}.assessment-content{padding:20px}.mode-switch{display:flex;gap:5px;width:max-content;margin-bottom:17px;padding:4px;border:1px solid var(--ds-line);border-radius:11px;background:rgba(3,12,22,.48)}.mode-button{display:inline-flex;align-items:center;gap:7px;padding:9px 12px;border:0;border-radius:8px;color:#8298ae;background:transparent;cursor:pointer;font-size:.74rem;font-weight:750}.mode-button.active{color:var(--ds-text);background:rgba(32,199,255,.13);box-shadow:0 7px 20px rgba(0,0,0,.16)}.mode-button.active svg{color:var(--ds-cyan)}.icon{width:16px;height:16px}.upload-area{position:relative;display:grid;place-items:center;min-height:270px;padding:28px;border:1px dashed rgba(32,199,255,.38);border-radius:15px;background:radial-gradient(circle at 50% 0,rgba(32,199,255,.11),transparent 50%),rgba(5,18,31,.5);cursor:pointer;transition:.2s ease}.upload-area:hover,.upload-area.dragover{border-color:var(--ds-cyan);transform:translateY(-2px);background:radial-gradient(circle at 50% 0,rgba(32,199,255,.17),transparent 55%),rgba(5,18,31,.65)}.upload-area input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}.upload-content{text-align:center}.upload-icon{display:grid;place-items:center;width:58px;height:58px;margin:0 auto 15px;border:1px solid rgba(32,199,255,.26);border-radius:17px;color:var(--ds-cyan);background:rgba(32,199,255,.1);box-shadow:0 0 30px rgba(32,199,255,.1)}.upload-icon svg{width:25px;height:25px}.upload-title{margin-bottom:6px;font-size:.94rem;font-weight:800}.upload-subtitle{margin:0 0 10px;color:#a8b9cb;font-size:.76rem}.format-note{color:#698199;font-size:.67rem}.file-ready{display:none;align-items:center;justify-content:space-between;gap:12px;margin-top:12px;padding:10px 12px;border:1px solid rgba(32,199,255,.24);border-radius:11px;background:rgba(32,199,255,.07)}.file-ready.visible{display:flex}.file-summary{display:flex;align-items:center;gap:8px;min-width:0}.file-summary svg{color:var(--ds-cyan)}.file-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.75rem;font-weight:700}.file-size{color:var(--ds-muted);font-size:.66rem}.remove-file{display:grid;place-items:center;width:26px;height:26px;border:0;border-radius:7px;color:#94a9bd;background:transparent;cursor:pointer}.camera-panel{display:none;margin-bottom:16px}.camera-frame{position:relative;display:grid;place-items:center;overflow:hidden;aspect-ratio:4/3;border:1px solid var(--ds-line);border-radius:15px;background:#030a12}.camera-frame video,.camera-frame img{width:100%;height:100%;display:block;object-fit:cover}.camera-empty{max-width:250px;padding:20px;color:var(--ds-muted);text-align:center;font-size:.78rem}.camera-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:9px}.secondary-button,.quiet-button,.view-button{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:10px 11px;border:1px solid var(--ds-line);border-radius:10px;color:#a5b6c8;background:rgba(255,255,255,.035);cursor:pointer;font-size:.72rem;font-weight:750}.secondary-button:hover,.quiet-button:hover,.view-button:hover{border-color:rgba(32,199,255,.44);color:var(--ds-text)}.secondary-button:disabled{opacity:.42;cursor:not-allowed}.camera-note{margin:8px 0 0;color:#71869b;font-size:.68rem}.primary-button#assessBtn{width:100%;margin-top:15px}.loading-box{display:none;margin-top:14px;padding:13px;border:1px solid rgba(32,199,255,.18);border-radius:11px;background:rgba(32,199,255,.06)}.loading-box.visible{display:block}.loading-meta{display:flex;justify-content:space-between;margin-bottom:7px;color:#a7b7c9;font-size:.7rem}.loading-meta strong{color:var(--ds-cyan)}.progress-track{height:5px;overflow:hidden;border-radius:99px;background:rgba(255,255,255,.1)}.progress-fill{height:100%;width:0;border-radius:inherit;background:linear-gradient(90deg,var(--ds-cyan),var(--ds-lime));transition:width .4s ease}.result-card{display:none;margin-top:18px;padding:20px;border:1px solid rgba(32,199,255,.26);border-radius:15px;background:rgba(6,18,32,.6)}.result-card.visible{display:block}.result-header,.result-summary,.detail-header{display:flex;justify-content:space-between;gap:15px;align-items:flex-start}.result-overline,.result-label,.result-item-label,.side-kicker{color:var(--ds-cyan);font-size:.65rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase}.result-title{margin:4px 0 0;font-size:1.1rem}.severity-badge{display:inline-flex;padding:6px 9px;border:1px solid var(--ds-line);border-radius:99px;font-size:.66rem;font-weight:800}.severity-badge.critical,.severity-badge.high{color:#ffd9d4;background:rgba(255,128,107,.12);border-color:rgba(255,128,107,.4)}.severity-badge.stable,.severity-badge.low{color:#dcffc0;background:rgba(165,230,90,.1);border-color:rgba(165,230,90,.36)}.severity-badge.unknown,.severity-badge.medium{color:#bfefff;background:rgba(32,199,255,.1);border-color:rgba(32,199,255,.32)}.result-summary{align-items:center;padding:21px 0;border-bottom:1px solid var(--ds-line)}.result-classification{margin-top:6px;font-size:1.45rem;font-weight:800}.result-caption{margin-top:5px;color:var(--ds-muted);font-size:.74rem}.confidence-ring{display:grid;place-items:center;width:85px;height:85px;border-radius:50%;background:conic-gradient(var(--ds-cyan) var(--confidence),rgba(255,255,255,.08) 0);position:relative}.confidence-ring:after{content:"";position:absolute;inset:7px;border-radius:50%;background:var(--ds-panel-strong)}.confidence-content{position:relative;z-index:1;text-align:center}.confidence-number{display:block;font-size:1.05rem;font-weight:800}.confidence-word{display:block;color:var(--ds-muted);font-size:.55rem}.result-grid,.detail-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px}.result-item,.detail-box{padding:12px;border:1px solid var(--ds-line);border-radius:11px;background:rgba(255,255,255,.025)}.result-item-value{margin-top:5px;font-size:.8rem;font-weight:750}.recommendation{margin-top:10px;padding:13px;border:1px solid rgba(165,230,90,.22);border-radius:11px;background:rgba(165,230,90,.06)}.recommendation-title{display:flex;align-items:center;gap:7px;color:var(--ds-lime);font-size:.72rem;font-weight:800}.recommendation-summary{margin-top:7px;font-size:.8rem;font-weight:700}.recommendation-next{margin:5px 0 0;color:var(--ds-muted);font-size:.72rem}.detail-header{margin-top:16px;align-items:center}.detail-header h3{margin:5px 0 0;font-size:.85rem}.model-chip{padding:5px 7px;border:1px solid var(--ds-line);border-radius:99px;color:#a7bed2;font-size:.62rem}.detail-grid{grid-template-columns:repeat(2,1fr)}.detail-box h4{margin:0 0 7px;font-size:.72rem}.detail-box ul{margin:0;padding-left:17px;color:var(--ds-muted);font-size:.7rem}.detail-box p{margin:0;color:var(--ds-muted);font-size:.7rem}.result-actions{display:flex;gap:8px;margin-top:13px}
+        .recent-panel{overflow:hidden}.inspection-list{padding:6px 12px 10px}.inspection-row{display:grid;grid-template-columns:52px minmax(0,1fr) auto;align-items:center;gap:11px;padding:12px 7px;border-bottom:1px solid rgba(148,190,226,.1)}.inspection-row:last-child{border-bottom:0}.inspection-thumb{width:52px;height:42px;object-fit:cover;border-radius:8px;border:1px solid var(--ds-line);background:linear-gradient(145deg,#173957,#0b1a2a)}.inspection-thumb.placeholder{display:grid;place-items:center;color:var(--ds-cyan)}.inspection-thumb.placeholder svg{width:19px}.inspection-main{min-width:0}.inspection-title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.74rem;font-weight:750}.inspection-time{margin-top:4px;color:#738aa1;font-size:.65rem}.status-pill{display:inline-flex;padding:5px 7px;border-radius:99px;font-size:.61rem;font-weight:800;white-space:nowrap}.status-pill.critical{color:#ffd8d2;background:rgba(255,128,107,.13)}.status-pill.stable{color:#dcffc0;background:rgba(165,230,90,.11)}.status-pill.unknown{color:#bfefff;background:rgba(32,199,255,.11)}.recent-empty{padding:25px 16px;color:var(--ds-muted);text-align:center;font-size:.75rem}.recent-empty svg{display:block;width:30px;margin:0 auto 10px;color:var(--ds-cyan)}.quality-strip{display:grid;grid-template-columns:1.15fr 1fr;gap:16px;margin-top:18px}.quality-card{padding:18px 20px}.quality-card h3{margin:0 0 5px;font-size:.88rem}.quality-card p{margin:0;color:var(--ds-muted);font-size:.72rem}.checklist{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:14px 0 0;padding:0;list-style:none}.checklist li{display:flex;gap:8px;color:#a4b5c7;font-size:.7rem}.check-icon{display:grid;place-items:center;width:18px;height:18px;flex:0 0 auto;border-radius:6px;color:var(--ds-lime);background:rgba(165,230,90,.12)}.check-icon svg{width:12px}.efficiency-note{display:flex;gap:12px;align-items:flex-start;padding:16px;border:1px solid rgba(32,199,255,.2);border-radius:13px;background:rgba(32,199,255,.06);color:#a9bed1;font-size:.72rem}.efficiency-note svg{width:21px;flex:0 0 auto;color:var(--ds-cyan)}.efficiency-note strong{display:block;margin-bottom:5px;color:var(--ds-text);font-size:.78rem}
+        .tabs,.history-panel{display:none}.history-panel.visible{display:block;margin-top:20px}.history-heading{display:flex;justify-content:space-between;align-items:end;gap:15px;margin-bottom:15px}.history-heading h2{margin:0;font-size:1.25rem}.history-heading p{margin:4px 0 0;color:var(--ds-muted);font-size:.74rem}.history-tools{display:flex;gap:8px}.field-wrap{display:flex;align-items:center;gap:7px;padding:8px 10px;border:1px solid var(--ds-line);border-radius:9px;background:rgba(255,255,255,.035)}.field-wrap svg{width:14px;color:var(--ds-muted)}.search-input,.filter-select{border:0;outline:0;color:var(--ds-text);background:transparent;font-size:.7rem}.filter-select option{background:#0b1a2b}.history-meta{display:flex;justify-content:space-between;margin:0 2px 10px;color:var(--ds-muted);font-size:.68rem}.history-table-wrap{overflow:auto;border:1px solid var(--ds-line);border-radius:var(--ds-radius);background:rgba(9,23,39,.8)}.history-table{width:100%;min-width:760px;border-collapse:collapse;font-size:.7rem}.history-table th,.history-table td{padding:12px;text-align:left;border-bottom:1px solid rgba(148,190,226,.1)}.history-table th{color:#8196aa;font-size:.64rem;letter-spacing:.07em;text-transform:uppercase}.history-table tr:last-child td{border-bottom:0}.thumb{width:38px;height:30px;object-fit:cover;border-radius:6px}.history-empty{display:none;padding:35px;text-align:center;border:1px dashed var(--ds-line);border-radius:var(--ds-radius);color:var(--ds-muted)}.history-empty.visible{display:block}.history-empty svg{display:block;width:30px;margin:0 auto 10px;color:var(--ds-cyan)}.history-empty strong{display:block;color:var(--ds-text);font-size:.82rem}.history-empty span{font-size:.72rem}.toast{position:fixed;right:22px;bottom:22px;z-index:40;display:flex;align-items:center;gap:9px;max-width:min(360px,calc(100% - 44px));padding:12px 15px;border:1px solid rgba(32,199,255,.3);border-radius:11px;background:#0d253c;color:#c7d8e8;box-shadow:var(--ds-shadow);font-size:.74rem;transform:translateY(18px);opacity:0;pointer-events:none;transition:.24s ease}.toast.visible{transform:translateY(0);opacity:1}.toast svg{width:16px;color:var(--ds-cyan)}footer{padding:0 clamp(22px,4vw,46px) 27px;color:#657d95;font-size:.68rem}.footer-inner{display:flex;justify-content:space-between;gap:15px;border-top:1px solid var(--ds-line);padding-top:17px}.footer-links{display:flex;gap:14px}.footer-links a{color:#8aa1b7;text-decoration:none}
+        @media(max-width:1050px){.sidebar{width:220px}.main-area{width:calc(100% - 220px);margin-left:220px}.dashboard-grid{grid-template-columns:1fr}.recent-panel{display:none}.quality-strip{grid-template-columns:1fr}.search-box{width:220px}}
+        @media(max-width:700px){.sidebar{position:static;width:100%;height:auto;display:block;padding:12px 14px;border-right:0;border-bottom:1px solid var(--ds-line)}.app-shell{display:block}.brand{padding:2px 4px 12px}.sidebar-label,.side-spacer,.upgrade-card,.support-link{display:none}.side-nav{display:flex;overflow:auto;gap:4px}.side-nav a{flex:0 0 auto;padding:9px 10px}.side-nav a:not(.active){display:none}.main-area{width:100%;margin-left:0}.topbar{position:static;min-height:70px;padding:0 18px}.topbar-copy span,.search-box{display:none}.content{padding:25px 16px 40px}.hero-row{align-items:flex-start;flex-direction:column}.hero-row .primary-button{width:100%}.stats-grid{grid-template-columns:1fr}.stats-grid .stat-card:nth-child(3){display:none}.assessment-content{padding:15px}.quality-strip{display:block}.quality-card{margin-bottom:14px}.checklist{grid-template-columns:1fr}.footer-inner{align-items:flex-start;flex-direction:column}.history-heading{display:block}.history-tools{margin-top:12px;flex-direction:column}.field-wrap,.filter-select{width:100%}.result-grid,.detail-grid{grid-template-columns:1fr}.result-summary{align-items:flex-start;flex-direction:column}.result-actions{flex-direction:column}.result-actions button{width:100%}}
+        @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition-duration:.01ms!important}}
     </style>
 </head>
 <body>
-<div class="page-shell">
-    <nav class="topbar" aria-label="Primary navigation">
-        <div class="container topbar-inner">
-            <a class="brand" href="{{ url_for('main.home') }}" aria-label="DamageSense AI home">
-                <span class="brand-mark" aria-hidden="true">
-                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3 5 6v5c0 4.7 2.9 8.1 7 10 4.1-1.9 7-5.3 7-10V6l-7-3Z"/><path d="m9 12 2 2 4-4"/></svg>
-                </span>
-                <span class="brand-name">DamageSense <span>AI</span></span>
-            </a>
-            <div class="topbar-meta">
-                <span class="workspace-pill">Inspection workspace</span>
-                <span class="live-state"><span class="live-dot" aria-hidden="true"></span> Systems ready</span>
-                <a class="logout-link" href="{{ url_for('main.damage_map') }}">Global map</a>
-                {% if current_user.is_admin %}<a class="logout-link" href="{{ url_for('main.admin') }}">Admin console</a>{% endif %}
-                <span class="user-chip"><span class="user-avatar" aria-hidden="true">{{ current_user.username[0]|upper }}</span> <span>{{ current_user.username }}</span></span>
-                <a class="logout-link" href="{{ url_for('main.logout') }}">Log out</a>
+<div class="app-shell">
+    <aside class="sidebar" aria-label="Workspace navigation">
+        <a class="brand" href="{{ url_for('main.home') }}"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 12 6.5 6 12 3l5.5 3L20 12l-2.5 6L12 21l-5.5-3L4 12Z"/><path d="m7.5 13 2-4 3 2 2-2 2 3M8 16h8"/></svg></span><span class="brand-name">DamageSense <span>AI</span></span></a>
+        <p class="sidebar-label">Workspace</p>
+        <nav class="side-nav">
+            <a class="active" href="{{ url_for('main.home') }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m4 11 8-7 8 7v8a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-8Z"/><path d="M9 20v-6h6v6"/></svg>Dashboard</a>
+            <a href="#assessForm" onclick="document.getElementById('assessForm').scrollIntoView({behavior:'smooth'});return false;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8.5"/><path d="M12 8v8M8 12h8"/></svg>New inspection</a>
+            <a href="#historyPanel" onclick="showTab('history', document.getElementById('historyTab'));return false;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2"/></svg>History <span class="tab-badge" id="historyBadge" style="display:none">0</span></a>
+            <a href="{{ url_for('main.damage_map') }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m4 6 6-3 5 3 5-2v14l-6 3-5-3-5 2V6Z"/><path d="M10 3v15M15 6v15"/></svg>Map view</a>
+            {% if current_user and current_user.is_admin %}<a href="{{ url_for('main.admin') }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Admin console</a>{% endif %}
+        </nav>
+        <div class="side-spacer"></div>
+        <div class="upgrade-card"><strong>Upgrade to Pro</strong><p>Unlock advanced analytics, exports, and more.</p><a href="#">Upgrade now</a></div>
+        <a class="support-link" href="mailto:support@damagesense.ai"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 14v-2a8 8 0 0 1 16 0v2"/><path d="M4 14a2 2 0 0 0 2 2h1v-5H6a2 2 0 0 0-2 2ZM20 14a2 2 0 0 1-2 2h-1v-5h1a2 2 0 0 1 2 2ZM9 19h6"/></svg>Need help? Contact support</a>
+    </aside>
+    <div class="main-area">
+        <header class="topbar"><div class="topbar-copy"><h1>Dashboard</h1><span>Workspace overview</span></div><div class="topbar-actions"><label class="search-box"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 5 5"/></svg><input type="search" placeholder="Search inspections…" aria-label="Search inspections"></label><button class="notification" type="button" aria-label="Notifications"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9ZM10 21h4"/></svg><b>3</b></button><div class="user-menu"><span class="avatar">{{ (current_user.username[:2] if current_user else 'DS')|upper }}</span><span>{{ current_user.username if current_user else 'Workspace' }}</span><a class="logout" href="{{ url_for('main.logout') }}">Log out</a></div></div></header>
+        <main class="content">
+            <section class="hero-row"><div><h2>Good afternoon, {{ current_user.username if current_user else 'there' }}</h2><span class="sr-only">{{ current_user.username if current_user else 'there' }}'s Assessment Home</span><p>Here’s what’s happening with your inspections today.</p></div><button class="primary-button" type="button" onclick="document.getElementById('assessForm').scrollIntoView({behavior:'smooth',block:'center'});"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>New inspection</button></section>
+            <section class="stats-grid" aria-label="Inspection summary"><article class="stat-card"><div class="stat-top"><span>Inspections this month</span><span class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 3h8M8 8h8M8 12h5M8 16h3"/></svg></span></div><strong class="stat-number" id="totalCount">0</strong><span class="stat-trend">↑ 18% <span style="color:var(--ds-muted)">vs last month</span></span></article><article class="stat-card coral"><div class="stat-top"><span>Issues detected</span><span class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m12 3 9 17H3L12 3Z"/><path d="M12 9v5M12 17h.01"/></svg></span></div><strong class="stat-number" id="criticalCount">0</strong><span class="stat-trend">↑ 23% <span style="color:var(--ds-muted)">vs last month</span></span></article><article class="stat-card violet"><div class="stat-top"><span>Avg. confidence</span><span class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></span></div><strong class="stat-number">{{ ((reports|sum(attribute='confidence')) / (reports|length))|round(0)|int if reports else 0 }}%</strong><span class="stat-trend" style="color:var(--ds-lime)">↑ 4% <span style="color:var(--ds-muted)">vs last month</span></span></article></section>
+            <div class="dashboard-grid">
+                <section class="panel assessment-panel" id="uploadPanel"><div class="panel-header"><div><h3>Start a new inspection</h3><p>Upload clear evidence and get a first-pass damage signal.</p></div><span class="secure-label" style="color:var(--ds-lime);font-size:.68rem;white-space:nowrap">● Private workspace</span></div><div class="assessment-content"><div class="mode-switch" role="group" aria-label="Image source"><button class="mode-button active" type="button" id="uploadModeBtn" onclick="setCaptureMode('upload')"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5"/><path d="M5 14v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"/></svg>Upload image</button><button class="mode-button" type="button" id="cameraModeBtn" onclick="setCaptureMode('camera')"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z"/><circle cx="12" cy="13" r="3.5"/></svg>Take a picture</button></div><form id="assessForm" novalidate><div class="upload-area" id="uploadArea"><div class="upload-content"><div class="upload-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 16.5V19a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-2.5"/><path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5"/></svg></div><div class="upload-title" id="uploadTitle">Drop your image here</div><div class="upload-subtitle" id="uploadText">or click to browse from your device</div><div class="format-note">Buildings · roads · bridges · utilities · JPG, PNG, WEBP · up to 16 MB</div></div><input type="file" name="image" id="imageInput" accept="image/jpeg,image/png,image/webp,image/gif,image/*" aria-label="Choose a structural image"></div><div class="file-ready" id="fileReady" aria-live="polite"><div class="file-summary"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5a2 2 0 0 1 2-2h8l6 6v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5Z"/><path d="M14 3v6h6"/></svg><div><div class="file-name" id="fileName">-</div><div class="file-size" id="fileSize">-</div></div></div><button class="remove-file" type="button" onclick="clearSelectedFile()" aria-label="Remove selected image"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div><div class="camera-panel" id="cameraPanel"><div class="camera-frame" id="cameraFrame"><video id="cameraVideo" autoplay playsinline muted style="display:none"></video><img id="photoPreview" alt="Captured structural preview" style="display:none"><div class="camera-empty" id="cameraEmpty">Start the camera, frame the structure, then capture a photo for assessment.</div></div><div class="camera-actions"><button class="secondary-button" type="button" id="startCameraBtn" onclick="startCamera()">Start camera</button><button class="secondary-button" type="button" id="capturePhotoBtn" onclick="capturePhoto()" disabled>Capture</button><button class="secondary-button" type="button" id="retakePhotoBtn" onclick="retakePhoto()" disabled>Retake</button></div><p class="camera-note">Camera access requires a secure website. On mobile, Upload image can also open your camera.</p></div><button type="submit" class="primary-button" id="assessBtn"><svg class="icon button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m13 2-9 12h7l-1 8 9-12h-7l1-8Z"/></svg><span id="assessButtonText">Run assessment</span><span class="button-spinner" aria-hidden="true"></span></button></form><div class="loading-box" id="loadingBox" aria-live="polite"><div class="loading-meta"><span id="loadingMessage">Preparing your image…</span><strong id="loadingPercent">15%</strong></div><div class="progress-track"><div class="progress-fill" id="progressFill"></div></div></div><div class="result-card" id="resultCard" aria-live="polite"><div class="result-header"><div><div class="result-overline">Assessment complete</div><h2 class="result-title">Your first-pass signal</h2></div><div id="severityBadge" class="severity-badge unknown">Needs review</div></div><div class="result-summary"><div class="result-lead"><div class="result-label">Classification</div><div class="result-classification" id="resLabel">-</div><div class="result-caption" id="resultCaption">Model classification from the submitted image</div></div><div class="confidence-ring" id="confidenceRing" style="--confidence:0%"><div class="confidence-content"><span class="confidence-number" id="resConfidence">-</span><span class="confidence-word">confidence</span></div></div></div><div class="result-grid"><div class="result-item"><div class="result-item-label">Severity</div><div class="result-item-value" id="resSeverity">-</div></div><div class="result-item"><div class="result-item-label">Urgency</div><div class="result-item-value" id="resUrgency">-</div></div><div class="result-item"><div class="result-item-label">Source file</div><div class="result-item-value" id="resFile">-</div></div></div><div class="recommendation"><div class="recommendation-title">Recommended next step</div><div class="recommendation-summary" id="resRecSummary">-</div><p class="recommendation-next" id="resRecNextStep">-</p></div><div class="detail-header"><div><div class="result-item-label">Professional analysis</div><h3 id="resExecutiveSummary">-</h3></div><span class="model-chip" id="resModel">-</span></div><div class="detail-grid"><div class="detail-box"><h4>Observed findings</h4><ul id="resFindings"><li>Awaiting analysis.</li></ul></div><div class="detail-box hazard-box"><h4>Potential hazards</h4><ul id="resHazards"><li>Awaiting analysis.</li></ul></div><div class="detail-box"><h4>Recommended actions</h4><ul id="resActions"><li>Awaiting analysis.</li></ul></div><div class="detail-box"><h4>Confidence rationale</h4><p id="resConfidenceRationale">-</p></div></div><div class="result-actions"><button class="secondary-button" type="button" onclick="showTab('history', document.getElementById('historyTab'))">View in history</button><button class="secondary-button" type="button" onclick="newAssessment()">Start another assessment</button></div></div></div></section>
+                <aside class="panel recent-panel"><div class="panel-header"><div><h3>Recent inspections</h3><p>Your latest saved assessments</p></div><a href="#historyPanel" onclick="showTab('history', document.getElementById('historyTab'));return false;">View all →</a></div><div class="inspection-list">{% for report in reports[:5] %}<div class="inspection-row"><img class="inspection-thumb" src="{{ url_for('static', filename='uploads/' ~ report.filename) }}" alt="Assessment thumbnail" onerror="this.style.display='none'"><div class="inspection-main"><div class="inspection-title">{{ report.label|replace('_',' ')|title }}</div><div class="inspection-time">{{ report.timestamp.strftime('%b %d, %Y · %I:%M %p') }}</div></div><span class="status-pill {{ report.severity|lower }}">{{ report.severity|title }}</span></div>{% else %}<div class="recent-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 5a2 2 0 0 1 2-2h8l6 6v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5Z"/><path d="M14 3v6h6M8 14h8M8 17h5"/></svg><strong>No inspections yet</strong><br>Upload your first image to start building history.</div>{% endfor %}</div></aside>
             </div>
-        </div>
-    </nav>
-
-    <header class="hero">
-        <div class="container hero-grid">
-            <div>
-                <div class="eyebrow">AI-assisted structural triage</div>
-                <h1 aria-label="Read the signal. Move with confidence.">Read the signal.<br><span style="color:var(--cyan)">Move with confidence.</span></h1><span class="sr-only">{{ current_user.username }}'s Assessment Home</span>
-                <p class="hero-copy">Capture or upload a road, vehicle, building, bridge, utility asset, or other visible structure. Get a structured first-pass signal with <strong>severity, hazards, confidence, and a clear next step.</strong></p>
-            </div>
-            <div class="hero-snapshot" aria-label="Assessment summary">
-                <div class="snapshot-card"><span class="snapshot-number" id="totalCount">0</span><span class="snapshot-label">Assessments</span></div>
-                <div class="snapshot-card critical"><span class="snapshot-number" id="criticalCount">0</span><span class="snapshot-label">Critical</span></div>
-                <div class="snapshot-card stable"><span class="snapshot-number" id="stableCount">0</span><span class="snapshot-label">Stable</span></div>
-            </div>
-        </div>
-    </header>
-
-    <main class="workspace container">
-        <div class="tabs" role="tablist" aria-label="Assessment workspace views">
-            <button class="tab active" id="uploadTab" type="button" role="tab" aria-selected="true" onclick="showTab('upload', this)">New assessment</button>
-            <button class="tab" id="historyTab" type="button" role="tab" aria-selected="false" onclick="showTab('history', this)">History <span class="tab-badge" id="historyBadge" style="display:none">0</span></button>
-            <div class="tab-actions">
-                <button class="quiet-button" type="button" onclick="exportHistory()" title="Download assessment history as CSV">
-                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14"/></svg><span>Export CSV</span>
-                </button>
-            </div>
-        </div>
-
-        <section class="upload-panel" id="uploadPanel" role="tabpanel" aria-labelledby="uploadTab">
-            <div class="panel-grid">
-                <div>
-                    <section class="card assessment-card">
-                        <div class="section-heading">
-                            <div>
-                                <h2>Start a new assessment</h2>
-                                <p>Use a clear, well-lit image for the most useful first-pass signal.</p>
-                            </div>
-                            <span class="secure-label"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg> Private workspace</span>
-                        </div>
-
-                        <div class="mode-switch" role="group" aria-label="Image source">
-                            <button class="mode-button active" type="button" id="uploadModeBtn" onclick="setCaptureMode('upload')"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5"/><path d="M5 14v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"/></svg>Upload image</button>
-                            <button class="mode-button" type="button" id="cameraModeBtn" onclick="setCaptureMode('camera')"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z"/><circle cx="12" cy="13" r="3.5"/></svg>Take a picture</button>
-                        </div>
-
-                        <form id="assessForm" novalidate>
-                            <div class="upload-area" id="uploadArea">
-                                <div class="upload-content">
-                                    <div class="upload-icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 16.5V19a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-2.5"/><path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5"/></svg></div>
-                                    <div class="upload-title" id="uploadTitle">Drop your image here</div>
-                                    <div class="upload-subtitle" id="uploadText">or click to browse from your device</div>
-                                    <div class="format-note">Roads · vehicles · buildings · bridges · utilities · JPG, PNG, WEBP or GIF · up to 16 MB</div>
-                                </div>
-                                <input type="file" name="image" id="imageInput" accept="image/jpeg,image/png,image/webp,image/gif,image/*" aria-label="Choose a structural image">
-                            </div>
-                            <div class="file-ready" id="fileReady" aria-live="polite">
-                                <div class="file-summary"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5a2 2 0 0 1 2-2h8l6 6v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5Z"/><path d="M14 3v6h6"/></svg><div><div class="file-name" id="fileName">-</div><div class="file-size" id="fileSize">-</div></div></div>
-                                <button class="remove-file" type="button" onclick="clearSelectedFile()" aria-label="Remove selected image"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
-                            </div>
-
-                            <div class="camera-panel" id="cameraPanel">
-                                <div class="camera-frame" id="cameraFrame">
-                                    <video id="cameraVideo" autoplay playsinline muted style="display:none"></video>
-                                    <img id="photoPreview" alt="Captured structural preview" style="display:none">
-                                    <div class="camera-empty" id="cameraEmpty">Start the camera, frame the structure, then capture a photo for assessment.</div>
-                                </div>
-                                <div class="camera-actions">
-                                    <button class="secondary-button" type="button" id="startCameraBtn" onclick="startCamera()"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z"/><circle cx="12" cy="13" r="3.5"/></svg><span>Start camera</span></button>
-                                    <button class="secondary-button" type="button" id="capturePhotoBtn" onclick="capturePhoto()" disabled><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2"/></svg><span>Capture</span></button>
-                                    <button class="secondary-button" type="button" id="retakePhotoBtn" onclick="retakePhoto()" disabled><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 11a8 8 0 0 0-14.5-4.7L4 8"/><path d="M4 4v4h4M4 13a8 8 0 0 0 14.5 4.7L20 16"/><path d="M20 20v-4h-4"/></svg><span>Retake</span></button>
-                                </div>
-                                <p class="camera-note">Camera access requires a secure website. On mobile, Upload image can also open your camera.</p>
-                            </div>
-
-                            <button type="submit" class="primary-button" id="assessBtn"><svg class="icon button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m13 2-9 12h7l-1 8 9-12h-7l1-8Z"/></svg><span id="assessButtonText">Run assessment</span><span class="button-spinner" aria-hidden="true"></span></button>
-                        </form>
-
-                        <div class="loading-box" id="loadingBox" aria-live="polite">
-                            <div class="loading-meta"><span id="loadingMessage">Preparing your image…</span><strong id="loadingPercent">15%</strong></div>
-                            <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
-                        </div>
-
-                        <div class="result-card" id="resultCard" aria-live="polite">
-                            <div class="result-header">
-                                <div><div class="result-overline">Assessment complete</div><h2 class="result-title">Your first-pass signal</h2></div>
-                                <div id="severityBadge" class="severity-badge unknown">Needs review</div>
-                            </div>
-                            <div class="result-summary">
-                                <div class="result-lead"><div class="result-label">Classification</div><div class="result-classification" id="resLabel">-</div><div class="result-caption" id="resultCaption">Model classification from the submitted image</div></div>
-                                <div class="confidence-ring" id="confidenceRing" style="--confidence:0%"><div class="confidence-content"><span class="confidence-number" id="resConfidence">-</span><span class="confidence-word">confidence</span></div></div>
-                            </div>
-                            <div class="result-grid">
-                                <div class="result-item"><div class="result-item-label">Severity</div><div class="result-item-value" id="resSeverity">-</div></div>
-                                <div class="result-item"><div class="result-item-label">Urgency</div><div class="result-item-value" id="resUrgency">-</div></div>
-                                <div class="result-item"><div class="result-item-label">Source file</div><div class="result-item-value" id="resFile">-</div></div>
-                            </div>
-                            <div class="recommendation"><div class="recommendation-title"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 18h6M10 22h4M8.5 14.5a6 6 0 1 1 7 0c-.9.6-1.5 1.4-1.5 2.5h-4c0-1.1-.6-1.9-1.5-2.5Z"/></svg>Recommended next step</div><div class="recommendation-summary" id="resRecSummary">-</div><p class="recommendation-next" id="resRecNextStep">-</p></div>
-                            <div class="detail-header"><div><div class="result-item-label">Professional analysis</div><h3 id="resExecutiveSummary">-</h3></div><span class="model-chip" id="resModel">-</span></div>
-                            <div class="detail-grid"><div class="detail-box"><h4>Observed findings</h4><ul id="resFindings"><li>Awaiting analysis.</li></ul></div><div class="detail-box hazard-box"><h4>Potential hazards</h4><ul id="resHazards"><li>Awaiting analysis.</li></ul></div><div class="detail-box"><h4>Recommended actions</h4><ul id="resActions"><li>Awaiting analysis.</li></ul></div><div class="detail-box"><h4>Confidence rationale</h4><p id="resConfidenceRationale">-</p></div></div>
-                            <div class="result-actions"><button class="secondary-button" type="button" onclick="showTab('history', document.getElementById('historyTab'))">View in history</button><button class="secondary-button" type="button" onclick="newAssessment()">Start another assessment</button></div>
-                        </div>
-                    </section>
-                </div>
-
-                <aside class="card quality-card">
-                    <div class="side-kicker"><span>Improve signal quality</span><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3 5 6v5c0 4.7 2.9 8.1 7 10 4.1-1.9 7-5.3 7-10V6l-7-3Z"/><path d="m9 12 2 2 4-4"/></svg></div>
-                    <h3>Make every frame count</h3>
-                    <p>A little preparation helps the model focus on the structure, not the conditions around it.</p>
-                    <ul class="checklist">
-                        <li><span class="check-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12 4 4L19 6"/></svg></span><span>Use even daylight and avoid harsh glare or deep shadows.</span></li>
-                        <li><span class="check-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12 4 4L19 6"/></svg></span><span>Keep the suspected damage centered and fill most of the frame.</span></li>
-                        <li><span class="check-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12 4 4L19 6"/></svg></span><span>Hold the camera steady and capture the surrounding context.</span></li>
-                        <li><span class="check-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12 4 4L19 6"/></svg></span><span>Use a second angle when the surface or defect is hard to read.</span></li>
-                    </ul>
-                    <div class="quality-divider"></div>
-                    <div class="efficiency-note"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M18.4 5.6l-2.8 2.8M8.4 15.6l-2.8 2.8"/><circle cx="12" cy="12" r="3"/></svg><div><strong>Faster triage, safer follow-up</strong>Use the severity and confidence together. Low-confidence results should be reviewed manually.</div></div>
-                </aside>
-            </div>
-        </section>
-
-        <section class="history-panel" id="historyPanel" role="tabpanel" aria-labelledby="historyTab">
-            <div class="history-heading"><div><h2>Assessment history</h2><p>Review prior signals, recommendations, and the files behind them.</p></div><div class="history-tools"><label class="field-wrap"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 5 5"/></svg><input class="search-input" id="historySearch" type="search" placeholder="Search files or labels" aria-label="Search assessment history"></label><select class="filter-select" id="historyFilter" aria-label="Filter assessment history"><option value="ALL">All severities</option><option value="CRITICAL">Critical</option><option value="STABLE">Stable</option><option value="UNKNOWN">Needs review</option></select></div></div>
-            <div class="history-meta"><span class="history-count" id="historyCount">Showing <strong>0</strong> assessments</span><span>Newest first</span></div>
-            <div class="history-empty" id="historyEmpty"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 5a2 2 0 0 1 2-2h8l6 6v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5Z"/><path d="M14 3v6h6M8 14h8M8 17h5"/></svg><strong id="emptyTitle">No assessments yet</strong><span id="emptyText">Your completed assessments will appear here.</span></div>
-            <div class="history-table-wrap" id="historyTableWrap" style="display:none"><table class="history-table"><thead><tr><th>Image</th><th>File</th><th>Classification</th><th>Confidence</th><th>Severity</th><th>Next step</th><th>Time</th><th></th></tr></thead><tbody id="historyBody"></tbody></table></div>
-        </section>
-    </main>
-
-    <div class="toast" id="toast" role="status" aria-live="polite"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v18M3 12h18"/></svg><span id="toastText"></span></div>
-
-    <footer><div class="container footer-inner"><span>© 2026 DamageSense AI · Use automated results as an informed first pass.</span><div class="footer-links"><a href="/health">API status</a><a href="https://github.com/WIZZ249/DamageSense-AI" target="_blank" rel="noreferrer">GitHub</a></div></div></footer>
+            <div class="quality-strip"><section class="panel quality-card"><div class="side-kicker">Inspection quality guide</div><h3>Make every frame count</h3><p>A little preparation helps the model focus on the evidence, not the conditions around it.</p><ul class="checklist"><li><span class="check-icon">✓</span><span>Use even daylight and avoid harsh glare.</span></li><li><span class="check-icon">✓</span><span>Keep suspected damage centered.</span></li><li><span class="check-icon">✓</span><span>Hold steady and include context.</span></li><li><span class="check-icon">✓</span><span>Use a second angle when needed.</span></li></ul></section><section class="panel quality-card"><div class="efficiency-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M18.4 5.6l-2.8 2.8M8.4 15.6l-2.8 2.8"/><circle cx="12" cy="12" r="3"/></svg><div><strong>Faster triage, safer follow-up</strong>Use severity and confidence together. Low-confidence results should be reviewed manually.</div></div></section></div>
+            <div class="tabs" role="tablist" aria-label="Assessment workspace views"><button class="tab active" id="uploadTab" type="button" role="tab" aria-selected="true">New assessment</button><button class="tab" id="historyTab" type="button" role="tab" aria-selected="false">History</button></div>
+            <section class="history-panel" id="historyPanel" role="tabpanel" aria-labelledby="historyTab"><div class="history-heading"><div><h2>Assessment history</h2><p>Review prior signals, recommendations, and the files behind them.</p></div><div class="history-tools"><label class="field-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 5 5"/></svg><input class="search-input" id="historySearch" type="search" placeholder="Search files or labels" aria-label="Search assessment history"></label><select class="filter-select" id="historyFilter" aria-label="Filter assessment history"><option value="ALL">All severities</option><option value="CRITICAL">Critical</option><option value="STABLE">Stable</option><option value="UNKNOWN">Needs review</option></select></div></div><div class="history-meta"><span class="history-count" id="historyCount">Showing <strong>0</strong> assessments</span><span>Newest first</span></div><div class="history-empty" id="historyEmpty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 5a2 2 0 0 1 2-2h8l6 6v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5Z"/><path d="M14 3v6h6M8 14h8M8 17h5"/></svg><strong id="emptyTitle">No assessments yet</strong><span id="emptyText">Your completed assessments will appear here.</span></div><div class="history-table-wrap" id="historyTableWrap" style="display:none"><table class="history-table"><thead><tr><th>Image</th><th>File</th><th>Classification</th><th>Confidence</th><th>Severity</th><th>Next step</th><th>Time</th><th></th></tr></thead><tbody id="historyBody"></tbody></table></div></section>
+        </main>
+        <div class="toast" id="toast" role="status" aria-live="polite"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v18M3 12h18"/></svg><span id="toastText"></span></div>
+        <footer><div class="footer-inner"><span>© 2026 DamageSense AI · Automated results are an informed first pass.</span><div class="footer-links"><a href="{{ url_for('main.health') }}">API status</a><a href="https://github.com/WIZZ249/DamageSense-AI" target="_blank" rel="noreferrer">GitHub</a><a href="{{ url_for('main.logout') }}">Log out</a></div></div></footer>
+    </div>
 </div>
-<noscript><div class="noscript">JavaScript is required to upload an image and run an assessment. Please enable it and reload the workspace.</div></noscript>
 
 <script>
     let history = {{ reports_json|tojson }};
